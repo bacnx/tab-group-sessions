@@ -231,7 +231,7 @@ reply with an `ActionResult`; errors are shown inline and the picker stays open.
 - [x] **M2** auto-grouping: new tabs → active/opener group, strays → Inbox (kept last)
 - [ ] **M3** unified picker: fuzzy search, popup + window fallback, in-group tab navigation *(implemented, awaiting manual test)*
 - [x] **M4** group management + move tab + leader mode + options page
-- [ ] **M5** snapshots *(implemented, awaiting manual test)*
+- [x] **M5** snapshots
 - [ ] **M6** restore + duplicate merge
 - [ ] **M7** polish: reopen closed group, etc.
 
@@ -295,6 +295,13 @@ here is still an assumption.
 - Extension pages (diagnostics, picker) load fresh files from `dist/` on open, but the manifest
   and service worker only change on **reload** — the diagnostics `build` line can be newer
   than the running worker (compare with `sw.start.build`).
+- **Real restart (menu → Exit, relaunch)**: `runtime.onStartup` fires, then the whole window
+  with all tabs and groups is recreated within ~5 ms — before the service worker's own boot
+  code has even run. Groups arrive untitled and get their titles within ms; collapsed state is
+  restored. **About 4–6 s later every group was expanded** (not by us — possibly Chrome while
+  lazily loading the restored tabs), so focus/collapse must be re-applied *after* settling.
+- Snapshots verified across a real restart: the last pre-exit snapshot survived, no empty or
+  suspicious snapshot was written at shutdown.
 - Chrome split view creates helper tabs `chrome://tab-search.top-chrome/split_new_tab_page.html`
   that appear (inside the group) and disappear quickly — stray-tab logic must tolerate them.
 
