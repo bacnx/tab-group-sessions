@@ -262,7 +262,7 @@ reply with an `ActionResult`; errors are shown inline and the picker stays open.
 - [x] **M4** group management + move tab + leader mode + options page
 - [x] **M5** snapshots
 - [ ] **M6** restore + duplicate merge *(implemented, awaiting manual test)*
-- [ ] **M7** polish: reopen closed group *(implemented, awaiting manual test)*, etc.
+- [ ] **M7** polish: reopen closed group, cross-window duplicate merge, M0 probes removed, README *(implemented, awaiting manual test)*; default key layout still to decide
 
 ## Verified Chrome behaviours
 
