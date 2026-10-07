@@ -239,5 +239,11 @@ here is still an assumption.
 - Chrome split view creates helper tabs `chrome://tab-search.top-chrome/split_new_tab_page.html`
   that appear (inside the group) and disappear quickly — stray-tab logic must tolerate them.
 
-Still to verify: PDF focus, Ctrl+Tab over collapsed groups, a real browser restart (Exit from
-the menu), saved-group leftovers.
+- Picker focus also verified on the PDF viewer.
+- **Groups created through the API become saved groups and get pinned to the bookmarks bar**
+  (the `tgs-probe-*` groups stayed there after their window closed). Expect the same for Inbox
+  and any group restored by the extension — relevant for M6 duplicate handling.
+- The extension keeps working after a real browser exit (menu → Exit) and relaunch.
+
+Not checked (not needed by the design): whether Chrome's Ctrl+Tab skips collapsed groups —
+either way the active-tab rule re-focuses correctly.
