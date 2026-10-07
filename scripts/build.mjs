@@ -1,13 +1,22 @@
 // Builds the extension into dist/. `--watch` rebuilds TS and re-copies static/ on change.
 import * as esbuild from 'esbuild';
-import { cp, mkdir, rm } from 'node:fs/promises';
+import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { watch as fsWatch } from 'node:fs';
 
 const watch = process.argv.includes('--watch');
 const outdir = 'dist';
+// Fixed for the whole process: in watch mode it is the time `pnpm dev` started.
+const buildTime = new Date().toISOString();
 
 async function copyStatic() {
   await cp('static', outdir, { recursive: true });
+  // Show the build time on the chrome://extensions card (unpacked reloads don't need a
+  // version bump, so `version` itself stays as written in static/manifest.json).
+  const manifestPath = `${outdir}/manifest.json`;
+  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+  manifest.version_name = `${manifest.version} (build ${buildTime.slice(0, 16).replace('T', ' ')} UTC)`;
+  await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}
+`);
 }
 
 await rm(outdir, { recursive: true, force: true });
@@ -26,7 +35,7 @@ const ctx = await esbuild.context({
   outdir,
   sourcemap: 'linked',
   logLevel: 'info',
-  define: { __BUILD_TIME__: JSON.stringify(new Date().toISOString()) },
+  define: { __BUILD_TIME__: JSON.stringify(buildTime) },
 });
 
 if (watch) {
