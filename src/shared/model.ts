@@ -93,3 +93,10 @@ export function decidePlacement(input: PlacementInput): Placement {
   }
   return { kind: 'inbox' };
 }
+
+/** goto-tab-N inside a group: 1-based, 9 = last (like Chrome's Ctrl+9). */
+export function nthItem<T>(items: readonly T[], n: number): T | undefined {
+  if (items.length === 0) return undefined;
+  if (n >= 9) return items[items.length - 1];
+  return items[n - 1];
+}

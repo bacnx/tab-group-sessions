@@ -1,6 +1,6 @@
 // chrome.commands → actions. Commands act on the last-focused normal window.
 
-import { cycleGroup, lastGroup } from './actions';
+import { cycleGroup, cycleTabInGroup, gotoTabInGroup, lastGroup } from './actions';
 import { isNormalWindow } from './focus';
 import { openPicker, openPickerWindow } from './launcher';
 import { enqueue } from './queue';
@@ -35,6 +35,12 @@ export function handleCommand(command: string, tab: chrome.tabs.Tab | undefined)
         return cycleGroup(windowId, -1);
       case 'last-group':
         return lastGroup(windowId);
+      case 'next-tab-in-group':
+        return cycleTabInGroup(windowId, 1);
+      case 'prev-tab-in-group':
+        return cycleTabInGroup(windowId, -1);
     }
+    const goto = /^goto-tab-([1-9])$/.exec(command);
+    if (goto) return gotoTabInGroup(windowId, Number(goto[1]));
   });
 }

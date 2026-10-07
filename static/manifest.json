@@ -4,7 +4,13 @@
   "version": "0.0.1",
   "description": "tmux-like sessions on top of Chrome Tab Groups, fully keyboard driven.",
   "minimum_chrome_version": "127",
-  "permissions": ["tabs", "tabGroups", "storage", "alarms"],
+  "permissions": [
+    "tabs",
+    "tabGroups",
+    "storage",
+    "alarms",
+    "favicon"
+  ],
   "background": {
     "service_worker": "background.js",
     "type": "module"
@@ -15,29 +21,70 @@
   },
   "commands": {
     "_execute_action": {
-      "suggested_key": { "default": "Alt+S" },
-      "description": "Open picker (native action popup)"
+      "suggested_key": {
+        "default": "Alt+S"
+      },
+      "description": "Open the picker (search groups and tabs)"
     },
     "next-group": {
-      "suggested_key": { "default": "Alt+Period" },
+      "suggested_key": {
+        "default": "Alt+Period"
+      },
       "description": "Focus next group (wraps)"
     },
     "prev-group": {
-      "suggested_key": { "default": "Alt+Comma" },
+      "suggested_key": {
+        "default": "Alt+Comma"
+      },
       "description": "Focus previous group (wraps)"
     },
     "open-diagnostics": {
-      "suggested_key": { "default": "Alt+Shift+D" },
+      "suggested_key": {
+        "default": "Alt+Shift+D"
+      },
       "description": "Open the diagnostics page"
     },
     "last-group": {
       "description": "Toggle to the previously focused group"
     },
     "open-picker": {
-      "description": "Open picker via chrome.action.openPopup()"
+      "description": "Open the picker via chrome.action.openPopup()"
     },
     "open-picker-window": {
-      "description": "Open picker in a popup window (fallback path)"
+      "description": "Open the picker in a popup window"
+    },
+    "next-tab-in-group": {
+      "description": "Next tab in the current group (wraps)"
+    },
+    "prev-tab-in-group": {
+      "description": "Previous tab in the current group (wraps)"
+    },
+    "goto-tab-1": {
+      "description": "Go to tab 1 of the current group"
+    },
+    "goto-tab-2": {
+      "description": "Go to tab 2 of the current group"
+    },
+    "goto-tab-3": {
+      "description": "Go to tab 3 of the current group"
+    },
+    "goto-tab-4": {
+      "description": "Go to tab 4 of the current group"
+    },
+    "goto-tab-5": {
+      "description": "Go to tab 5 of the current group"
+    },
+    "goto-tab-6": {
+      "description": "Go to tab 6 of the current group"
+    },
+    "goto-tab-7": {
+      "description": "Go to tab 7 of the current group"
+    },
+    "goto-tab-8": {
+      "description": "Go to tab 8 of the current group"
+    },
+    "goto-tab-9": {
+      "description": "Go to the last tab of the current group"
     }
   }
 }

@@ -3,7 +3,9 @@
 export type Message =
   | { type: 'diag-log'; ev: string; data?: unknown }
   | { type: 'run-probes' }
-  | { type: 'dump-state' };
+  | { type: 'dump-state' }
+  | { type: 'focus-group'; groupId: number }
+  | { type: 'activate-tab'; tabId: number };
 
 export async function send<T = unknown>(msg: Message): Promise<T> {
   return chrome.runtime.sendMessage(msg) as Promise<T>;

@@ -3,8 +3,12 @@
   --bg: #ffffff;
   --fg: #1f1f1f;
   --muted: #6b6b6b;
-  --border: #d0d0d0;
+  --border: #dadce0;
   --accent: #1a73e8;
+  --selected: #e8f0fe;
+  --mark: #1a73e8;
+  --g-grey: #5f6368; --g-blue: #1a73e8; --g-red: #d93025; --g-yellow: #f9ab00; --g-green: #188038;
+  --g-pink: #d01884; --g-purple: #a142f4; --g-cyan: #007b83; --g-orange: #fa903e;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -13,6 +17,10 @@
     --muted: #9aa0a6;
     --border: #3c4043;
     --accent: #8ab4f8;
+    --selected: #394457;
+    --mark: #8ab4f8;
+    --g-grey: #bdc1c6; --g-blue: #8ab4f8; --g-red: #f28b82; --g-yellow: #fdd663; --g-green: #81c995;
+    --g-pink: #ff8bcb; --g-purple: #d7aefb; --g-cyan: #78d9ec; --g-orange: #fcad70;
   }
 }
 html, body {
@@ -22,14 +30,17 @@ html, body {
   font: 13px/1.4 system-ui, sans-serif;
 }
 body {
-  width: 560px;
-  min-height: 160px;
-  padding: 10px;
-  box-sizing: border-box;
+  width: 640px;
+  display: flex;
+  flex-direction: column;
 }
-/* In the fallback popup window the page fills the window instead. */
+/* Fallback popup window: fill the window. */
 body.in-window {
   width: auto;
+  height: 100vh;
+}
+.search {
+  padding: 10px 10px 6px;
 }
 #query {
   width: 100%;
@@ -45,13 +56,97 @@ body.in-window {
 #query:focus {
   border-color: var(--accent);
 }
-#status {
-  margin: 8px 0 4px;
+#results {
+  list-style: none;
+  margin: 0;
+  padding: 0 6px;
+  max-height: 440px;
+  overflow-y: auto;
+}
+body.in-window #results {
+  max-height: none;
+  flex: 1;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  min-width: 0;
+}
+.row.selected {
+  background: var(--selected);
+}
+.dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--c, var(--muted));
+}
+.row.group .dot {
+  border-radius: 3px;
+}
+.fav {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+.title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.row.group .title {
+  font-weight: 600;
+}
+.chip {
+  flex: none;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--bg);
+  background: var(--c, var(--muted));
+}
+.url, .meta {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: 12px;
+}
+.meta {
+  flex: none;
+}
+mark {
+  background: none;
+  color: var(--mark);
+  font-weight: 700;
+}
+#empty {
+  padding: 12px 16px;
   color: var(--muted);
 }
-#diag {
-  margin: 0;
-  font: 11px/1.4 ui-monospace, Consolas, monospace;
-  white-space: pre-wrap;
+footer {
+  padding: 6px 12px 8px;
   color: var(--muted);
+  font-size: 11px;
+  border-top: 1px solid var(--border);
+  margin-top: 6px;
+}
+kbd {
+  font: 11px ui-monospace, Consolas, monospace;
+}
+/* Inside a coloured group chip the accent colour would vanish; underline instead. */
+.chip mark {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }

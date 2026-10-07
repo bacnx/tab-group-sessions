@@ -2,12 +2,13 @@
 // requirement); handlers only enqueue work, they never touch state directly.
 
 import './diag';
-import { handleGroupRemoved } from './actions';
+import { activateTab, focusGroupById, handleGroupRemoved } from './actions';
 import { handleCommand } from './commands';
 import { syncFocus } from './focus';
 import { recordFocusChange, recordNewTab, scheduleSweep, scheduleSweepAll } from './grouping';
 import { forgetPickerWindow } from './launcher';
 import { enqueue } from './queue';
+import type { Message } from '../shared/messages';
 import { NO_GROUP } from '../shared/model';
 import { clearWindowState } from './state';
 
@@ -53,6 +54,22 @@ chrome.windows.onRemoved.addListener((windowId) => {
 });
 
 chrome.commands.onCommand.addListener(handleCommand);
+
+// Picker actions. Answer right away so the picker can close; the work continues in the queue.
+chrome.runtime.onMessage.addListener((msg: Message, _sender, sendResponse) => {
+  switch (msg.type) {
+    case 'focus-group':
+      void enqueue('picker.focus-group', () => focusGroupById(msg.groupId));
+      break;
+    case 'activate-tab':
+      void enqueue('picker.activate-tab', () => activateTab(msg.tabId));
+      break;
+    default:
+      return false;
+  }
+  sendResponse(true);
+  return false;
+});
 
 chrome.runtime.onInstalled.addListener(() => {
   void enqueue('onInstalled.sync', async () => {

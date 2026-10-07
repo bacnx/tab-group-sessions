@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NO_GROUP, cycle, decidePlacement, groupOrder, mruFromTabs, pickTabToActivate, touchMru, type TabLike } from './model';
+import { NO_GROUP, cycle, decidePlacement, groupOrder, mruFromTabs, nthItem, pickTabToActivate, touchMru, type TabLike } from './model';
 
 const tab = (index: number, groupId: number, extra: Partial<TabLike> = {}): TabLike => ({
   id: index + 100,
@@ -106,5 +106,15 @@ describe('decidePlacement', () => {
     expect(decidePlacement({ isNew: false, external: false, openerGroupId: 4, activeGroupId: 7 })).toEqual({
       kind: 'inbox',
     });
+  });
+});
+
+describe('nthItem', () => {
+  it('is 1-based with 9 meaning last', () => {
+    expect(nthItem(['a', 'b', 'c'], 1)).toBe('a');
+    expect(nthItem(['a', 'b', 'c'], 3)).toBe('c');
+    expect(nthItem(['a', 'b', 'c'], 4)).toBeUndefined();
+    expect(nthItem(['a', 'b', 'c'], 9)).toBe('c');
+    expect(nthItem([], 9)).toBeUndefined();
   });
 });

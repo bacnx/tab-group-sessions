@@ -2,7 +2,7 @@
 // Run them through the queue.
 
 import { log } from '../shared/log';
-import { NO_GROUP, cycle, groupOrder } from '../shared/model';
+import { NO_GROUP, cycle, groupOrder, nthItem } from '../shared/model';
 import { focusGroup, getActiveTab, isNormalWindow, loadMru, syncFocus } from './focus';
 import { sleep } from './queue';
 import { getMru, setMru } from './state';
@@ -69,4 +69,47 @@ export async function handleGroupRemoved(group: chrome.tabGroups.TabGroup): Prom
   const existing = await existingGroupIds(windowId);
   const target = remaining.find((id) => existing.has(id));
   if (target !== undefined) await focusGroup(windowId, target);
+}
+
+/** Tabs of the active tab's group in strip order, with the active tab. */
+async function currentGroupTabs(windowId: number) {
+  const active = await getActiveTab(windowId);
+  if (!active?.id || active.groupId === NO_GROUP) return undefined;
+  const tabs = (await chrome.tabs.query({ windowId, groupId: active.groupId })).sort((a, b) => a.index - b.index);
+  return { active, tabs };
+}
+
+/** next-tab-in-group / prev-tab-in-group: cycle inside the current group, wrapping. */
+export async function cycleTabInGroup(windowId: number, step: 1 | -1): Promise<void> {
+  const current = await currentGroupTabs(windowId);
+  if (!current) return;
+  const target = cycle(
+    current.tabs.map((t) => t.id),
+    current.active.id,
+    step,
+  );
+  if (target !== undefined && target !== current.active.id) await chrome.tabs.update(target, { active: true });
+}
+
+/** goto-tab-N: Nth tab of the current group, 9 = last. */
+export async function gotoTabInGroup(windowId: number, n: number): Promise<void> {
+  const current = await currentGroupTabs(windowId);
+  const target = current && nthItem(current.tabs, n);
+  if (target?.id !== undefined && !target.active) await chrome.tabs.update(target.id, { active: true });
+}
+
+/** Picker: focus a group, bringing its window to the front. */
+export async function focusGroupById(groupId: number): Promise<void> {
+  const group = await chrome.tabGroups.get(groupId).catch(() => undefined);
+  if (!group) return;
+  await focusGroup(group.windowId, groupId);
+  await chrome.windows.update(group.windowId, { focused: true });
+}
+
+/** Picker: activate a tab, bringing its window to the front (focus rule follows via onActivated). */
+export async function activateTab(tabId: number): Promise<void> {
+  const tab = await chrome.tabs.get(tabId).catch(() => undefined);
+  if (!tab?.id) return;
+  await chrome.tabs.update(tab.id, { active: true });
+  await chrome.windows.update(tab.windowId, { focused: true });
 }

@@ -55,8 +55,12 @@ Shortcuts: `chrome://extensions/shortcuts`. Suggested keys in the manifest only 
      So `api login` = tabs matching "login" in group "api"; `pull request` = tabs anywhere.
    - Matching ignores Vietnamese diacritics (`tieng viet` matches `Tiếng Việt`, `đ` ≈ `d`).
    - Group rows rank higher when the query matches the group title.
-   - Keys: typing filters and auto-selects the first row; ↑/↓ move; Enter confirms; Esc exits.
+   - Keys: typing filters and auto-selects the first row; ↑/↓ move (wrapping), PageUp/PageDown
+     jump 8; Enter confirms; Esc exits; Tab is swallowed so focus never leaves the input.
      Enter is ignored while an IME is composing.
+   - Empty query: groups (current window first, strip order), then tabs by recency.
+   - Matching: per token, best weighted field wins — tab title ×1, group title ×0.9, URL ×0.6;
+     group rows get +10. Implemented in `shared/fuzzy.ts` + `shared/search.ts` (unit tested).
    - Enter on a group = focus that group; Enter on a tab = activate it (switching group/window).
    - Results from other windows show a window label.
 5. **Move tab mode**: same picker, lists only groups of the *current window* + "New group…".
@@ -83,7 +87,8 @@ Shortcuts: `chrome://extensions/shortcuts`. Suggested keys in the manifest only 
 
 ## Architecture
 
-No content scripts, no host permissions. Permissions: `tabs`, `tabGroups`, `storage`, `alarms`.
+No content scripts, no host permissions. Permissions: `tabs`, `tabGroups`, `storage`, `alarms`,
+`favicon` (picker icons via `/_favicon/`).
 
 ```
 src/
@@ -176,7 +181,7 @@ group · `1`–`9` goto tab · `(`/`)` prev/next group · `l` last group · `c` 
 - [x] **M0** scaffold + spike: probes done; remaining manual checks in `docs/m0-verification.md`
 - [x] **M1** focus engine: queue, state, onActivated → focusGroup, next/prev/last-group
 - [x] **M2** auto-grouping: new tabs → active/opener group, strays → Inbox (kept last)
-- [ ] **M3** unified picker: fuzzy search, popup + window fallback, in-group tab navigation
+- [ ] **M3** unified picker: fuzzy search, popup + window fallback, in-group tab navigation *(implemented, awaiting manual test)*
 - [ ] **M4** group management + move tab + leader mode + options page
 - [ ] **M5** snapshots
 - [ ] **M6** restore + duplicate merge
