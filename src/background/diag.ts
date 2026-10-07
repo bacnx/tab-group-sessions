@@ -130,12 +130,12 @@ async function summary() {
 void (async () => {
   const { bootId } = await chrome.storage.session.get('bootId');
   if (bootId) {
-    log('sw.start', { freshBoot: false, bootId });
+    log('sw.start', { freshBoot: false, bootId, build: __BUILD_TIME__ });
     return;
   }
   const id = crypto.randomUUID();
   await chrome.storage.session.set({ bootId: id });
-  log('sw.start', { freshBoot: true, bootId: id, state: await summary() });
+  log('sw.start', { freshBoot: true, build: __BUILD_TIME__, bootId: id, state: await summary() });
   // Sample the state while Chrome restores the previous session, to learn how long it takes.
   for (const ms of [1000, 3000, 6000, 10000, 15000]) {
     setTimeout(() => void summary().then((s) => log('boot.sample', { ms, ...s })), ms);

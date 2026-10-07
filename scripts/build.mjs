@@ -26,6 +26,7 @@ const ctx = await esbuild.context({
   outdir,
   sourcemap: 'linked',
   logLevel: 'info',
+  define: { __BUILD_TIME__: JSON.stringify(new Date().toISOString()) },
 });
 
 if (watch) {

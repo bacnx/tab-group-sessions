@@ -42,7 +42,9 @@ const actions: Record<string, () => Promise<void>> = {
     output.textContent = JSON.stringify(await send({ type: 'dump-state' }), null, 2);
   },
   async c() {
-    await navigator.clipboard.writeText(JSON.stringify(await readLog(), null, 1));
+    const commands = (await chrome.commands.getAll()).map((c) => ({ name: c.name, shortcut: c.shortcut }));
+    const report = { build: __BUILD_TIME__, commands, log: await readLog() };
+    await navigator.clipboard.writeText(JSON.stringify(report, null, 1));
     status.textContent = 'Log copied to clipboard';
   },
   async r() {
@@ -68,5 +70,12 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+async function renderCommands() {
+  const commands = await chrome.commands.getAll();
+  const lines = commands.map((c) => `${(c.shortcut || '(unbound)').padEnd(16)} ${c.name}`);
+  $<HTMLPreElement>('commands').textContent = [`build ${__BUILD_TIME__}`, ...lines].join('\n');
+}
+
 chrome.storage.local.onChanged.addListener(() => void renderLog());
+void renderCommands();
 void renderLog();

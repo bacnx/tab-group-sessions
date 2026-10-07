@@ -1,6 +1,7 @@
 // High-level actions shared by keyboard commands and (later) the picker.
 // Run them through the queue.
 
+import { log } from '../shared/log';
 import { NO_GROUP, cycle, groupOrder } from '../shared/model';
 import { focusGroup, getActiveTab, isNormalWindow, syncFocus } from './focus';
 import { sleep } from './queue';
@@ -22,6 +23,7 @@ export async function cycleGroup(windowId: number, step: 1 | -1): Promise<void> 
   const order = groupOrder(await chrome.tabs.query({ windowId }));
   const current = await currentGroup(windowId);
   const target = cycle(order, current, step);
+  log('action.cycleGroup', { windowId, step, order, current, target });
   if (target !== undefined) await focusGroup(windowId, target);
 }
 
@@ -29,7 +31,9 @@ export async function cycleGroup(windowId: number, step: 1 | -1): Promise<void> 
 export async function lastGroup(windowId: number): Promise<void> {
   const existing = await existingGroupIds(windowId);
   const current = await currentGroup(windowId);
-  const target = (await getMru(windowId)).find((id) => id !== current && existing.has(id));
+  const mru = await getMru(windowId);
+  const target = mru.find((id) => id !== current && existing.has(id));
+  log('action.lastGroup', { windowId, mru, current, target });
   if (target !== undefined) await focusGroup(windowId, target);
 }
 
