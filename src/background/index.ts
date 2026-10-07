@@ -5,12 +5,19 @@ import './diag';
 import { handleGroupRemoved } from './actions';
 import { handleCommand } from './commands';
 import { syncFocus } from './focus';
+import { recordNewTab, scheduleSweep, scheduleSweepAll } from './grouping';
 import { forgetPickerWindow } from './launcher';
 import { enqueue } from './queue';
+import { NO_GROUP } from '../shared/model';
 import { clearWindowState } from './state';
 
 chrome.tabs.onActivated.addListener(({ windowId }) => {
   void enqueue('tabs.onActivated', () => syncFocus(windowId));
+});
+
+chrome.tabs.onCreated.addListener((tab) => {
+  recordNewTab(tab);
+  scheduleSweep(tab.windowId);
 });
 
 chrome.tabs.onUpdated.addListener((_tabId, change, tab) => {
@@ -18,10 +25,22 @@ chrome.tabs.onUpdated.addListener((_tabId, change, tab) => {
   if (change.groupId !== undefined && tab.active) {
     void enqueue('tabs.onUpdated.groupId', () => syncFocus(tab.windowId));
   }
+  // A tab left its group (dragged out, or about to close) or got unpinned.
+  if (change.groupId === NO_GROUP || change.pinned === false) scheduleSweep(tab.windowId);
 });
+
+chrome.tabs.onAttached.addListener((_tabId, { newWindowId }) => scheduleSweep(newWindowId));
+
+// Keep Inbox last when groups appear or move.
+chrome.tabGroups.onCreated.addListener((group) => scheduleSweep(group.windowId));
+chrome.tabGroups.onMoved.addListener((group) => scheduleSweep(group.windowId));
 
 chrome.tabGroups.onRemoved.addListener((group) => {
   void enqueue('tabGroups.onRemoved', () => handleGroupRemoved(group));
+});
+
+chrome.windows.onCreated.addListener((win) => {
+  if (win.id !== undefined) scheduleSweep(win.id);
 });
 
 chrome.windows.onRemoved.addListener((windowId) => {
@@ -39,4 +58,10 @@ chrome.runtime.onInstalled.addListener(() => {
       if (win.id !== undefined) await syncFocus(win.id);
     }
   });
+  // Adopt the strays that existed before the extension was installed/reloaded.
+  void scheduleSweepAll();
 });
+
+// Give Chrome's session restore time to finish before adopting strays (proper boot
+// detection and reconcile come with M6).
+chrome.runtime.onStartup.addListener(() => void scheduleSweepAll(3000));

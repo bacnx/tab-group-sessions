@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NO_GROUP, cycle, groupOrder, mruFromTabs, pickTabToActivate, touchMru, type TabLike } from './model';
+import { NO_GROUP, cycle, decidePlacement, groupOrder, mruFromTabs, pickTabToActivate, touchMru, type TabLike } from './model';
 
 const tab = (index: number, groupId: number, extra: Partial<TabLike> = {}): TabLike => ({
   id: index + 100,
@@ -74,5 +74,35 @@ describe('mruFromTabs', () => {
       tab(4, 3, { lastAccessed: 45 }),
     ];
     expect(mruFromTabs(tabs)).toEqual([1, 3, 2]);
+  });
+});
+
+describe('decidePlacement', () => {
+  it('puts a new tab with a grouped opener into the opener group', () => {
+    expect(decidePlacement({ isNew: true, hasOpener: true, openerGroupId: 4, activeGroupId: 7 })).toEqual({
+      kind: 'group',
+      groupId: 4,
+    });
+  });
+
+  it('puts a new tab with an ungrouped opener (e.g. Ctrl+T from a pinned tab) into the active group', () => {
+    expect(decidePlacement({ isNew: true, hasOpener: true, openerGroupId: NO_GROUP, activeGroupId: 7 })).toEqual({
+      kind: 'group',
+      groupId: 7,
+    });
+  });
+
+  it('sends a new tab to Inbox when there is no group to join', () => {
+    expect(decidePlacement({ isNew: true, hasOpener: true })).toEqual({ kind: 'inbox' });
+  });
+
+  it('sends external-app tabs (no opener) to Inbox', () => {
+    expect(decidePlacement({ isNew: true, hasOpener: false, activeGroupId: 7 })).toEqual({ kind: 'inbox' });
+  });
+
+  it('sends existing strays to Inbox', () => {
+    expect(decidePlacement({ isNew: false, hasOpener: true, openerGroupId: 4, activeGroupId: 7 })).toEqual({
+      kind: 'inbox',
+    });
   });
 });

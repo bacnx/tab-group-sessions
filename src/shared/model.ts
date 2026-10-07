@@ -59,3 +59,33 @@ export function mruFromTabs(tabs: readonly TabLike[]): number[] {
   }
   return [...latest.entries()].sort((a, b) => b[1] - a[1]).map(([id]) => id);
 }
+
+export const INBOX_TITLE = 'Inbox';
+
+export type Placement = { kind: 'group'; groupId: number } | { kind: 'inbox' };
+
+export interface PlacementInput {
+  /** Created moments ago (seen in tabs.onCreated), as opposed to an existing stray tab. */
+  isNew: boolean;
+  /** Tabs opened from inside Chrome (Ctrl+T, links) carry an opener; external-app tabs don't. */
+  hasOpener: boolean;
+  /** Group of the opener tab at sweep time, if any. */
+  openerGroupId?: number;
+  /** Most recently focused group of the window that still exists. */
+  activeGroupId?: number;
+}
+
+/**
+ * Where an ungrouped, unpinned tab belongs:
+ * - a new tab opened from inside Chrome → the opener's group, else the active group;
+ * - everything else (external app, dragged out, restored ungrouped, unpinned) → Inbox.
+ */
+export function decidePlacement(input: PlacementInput): Placement {
+  if (input.isNew && input.hasOpener) {
+    if (input.openerGroupId !== undefined && input.openerGroupId !== NO_GROUP) {
+      return { kind: 'group', groupId: input.openerGroupId };
+    }
+    if (input.activeGroupId !== undefined) return { kind: 'group', groupId: input.activeGroupId };
+  }
+  return { kind: 'inbox' };
+}

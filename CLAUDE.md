@@ -42,6 +42,11 @@ Shortcuts: `chrome://extensions/shortcuts`. Suggested keys in the manifest only 
 3. **New tabs** (Ctrl+T, links, …) go into the active group (or the opener's group), placed at
    the **end of the group**. Tabs that Chrome already put in a group are left alone.
    Tabs opened by external apps go to Inbox.
+   Implementation rule (`decidePlacement`): a *new* tab **with an opener** (Ctrl+T and links
+   carry `openerTabId`) → opener's group, else the active (MRU) group; a new tab **without an
+   opener** (external app, or created by the extension itself) → Inbox; any other stray
+   (dragged out, restored ungrouped, unpinned) → Inbox. Placement runs in a per-window sweep
+   debounced to 300 ms of quiet (max 3 s), never directly from a single event.
 4. **Unified picker** (one fuzzy search over groups *and* tabs, all windows):
    - Query is split on spaces; every token must fuzzy-match (AND, fzf-style).
    - A tab's haystack is `group title + tab title + URL`; a group row's haystack is its title.
@@ -168,7 +173,7 @@ group · `1`–`9` goto tab · `(`/`)` prev/next group · `l` last group · `c` 
 
 - [x] **M0** scaffold + spike: probes done; remaining manual checks in `docs/m0-verification.md`
 - [x] **M1** focus engine: queue, state, onActivated → focusGroup, next/prev/last-group
-- [ ] **M2** auto-grouping: new tabs → active/opener group, strays → Inbox (kept last)
+- [ ] **M2** auto-grouping: new tabs → active/opener group, strays → Inbox (kept last) *(implemented, awaiting manual test)*
 - [ ] **M3** unified picker: fuzzy search, popup + window fallback, in-group tab navigation
 - [ ] **M4** group management + move tab + leader mode + options page
 - [ ] **M5** snapshots
