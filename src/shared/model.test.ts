@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NO_GROUP, cycle, groupOrder, pickTabToActivate, touchMru, type TabLike } from './model';
+import { NO_GROUP, cycle, groupOrder, mruFromTabs, pickTabToActivate, touchMru, type TabLike } from './model';
 
 const tab = (index: number, groupId: number, extra: Partial<TabLike> = {}): TabLike => ({
   id: index + 100,
@@ -61,5 +61,18 @@ describe('pickTabToActivate', () => {
 
   it('returns undefined for no tabs', () => {
     expect(pickTabToActivate([])).toBeUndefined();
+  });
+});
+
+describe('mruFromTabs', () => {
+  it('orders groups by their most recently accessed tab', () => {
+    const tabs = [
+      tab(0, 1, { lastAccessed: 10 }),
+      tab(1, 1, { lastAccessed: 50 }),
+      tab(2, 2, { lastAccessed: 40 }),
+      tab(3, NO_GROUP, { lastAccessed: 99 }),
+      tab(4, 3, { lastAccessed: 45 }),
+    ];
+    expect(mruFromTabs(tabs)).toEqual([1, 3, 2]);
   });
 });

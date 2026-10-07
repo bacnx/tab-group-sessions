@@ -3,7 +3,7 @@
 
 import { log } from '../shared/log';
 import { NO_GROUP, cycle, groupOrder } from '../shared/model';
-import { focusGroup, getActiveTab, isNormalWindow, syncFocus } from './focus';
+import { focusGroup, getActiveTab, isNormalWindow, loadMru, syncFocus } from './focus';
 import { sleep } from './queue';
 import { getMru, setMru } from './state';
 
@@ -11,7 +11,7 @@ import { getMru, setMru } from './state';
 async function currentGroup(windowId: number): Promise<number | undefined> {
   const active = await getActiveTab(windowId);
   if (active && active.groupId !== NO_GROUP) return active.groupId;
-  return (await getMru(windowId))[0];
+  return (await loadMru(windowId))[0];
 }
 
 async function existingGroupIds(windowId: number): Promise<Set<number>> {
@@ -31,7 +31,7 @@ export async function cycleGroup(windowId: number, step: 1 | -1): Promise<void> 
 export async function lastGroup(windowId: number): Promise<void> {
   const existing = await existingGroupIds(windowId);
   const current = await currentGroup(windowId);
-  const mru = await getMru(windowId);
+  const mru = await loadMru(windowId);
   const target = mru.find((id) => id !== current && existing.has(id));
   log('action.lastGroup', { windowId, mru, current, target });
   if (target !== undefined) await focusGroup(windowId, target);

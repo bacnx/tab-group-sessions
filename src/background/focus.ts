@@ -1,7 +1,7 @@
 // Focus engine: exactly one expanded group per window — the group of the active tab.
 // All functions are idempotent and re-read state from Chrome; call them through the queue.
 
-import { NO_GROUP, pickTabToActivate, touchMru } from '../shared/model';
+import { NO_GROUP, mruFromTabs, pickTabToActivate, touchMru } from '../shared/model';
 import { getMru, setMru } from './state';
 
 /** Windows the engine must not touch (the diagnostics probe window). */
@@ -11,6 +11,18 @@ export async function isNormalWindow(windowId: number): Promise<boolean> {
   if (ignoredWindows.has(windowId)) return false;
   const win = await chrome.windows.get(windowId).catch(() => undefined);
   return win?.type === 'normal';
+}
+
+/**
+ * MRU for a window. storage.session is empty after a browser restart or an extension reload;
+ * seed it from tab access times so last-group works immediately.
+ */
+export async function loadMru(windowId: number): Promise<number[]> {
+  const mru = await getMru(windowId);
+  if (mru.length > 0) return mru;
+  const seeded = mruFromTabs(await chrome.tabs.query({ windowId }));
+  if (seeded.length > 0) await setMru(windowId, seeded);
+  return seeded;
 }
 
 export async function getActiveTab(windowId: number): Promise<chrome.tabs.Tab | undefined> {
@@ -41,7 +53,7 @@ export async function focusGroup(windowId: number, groupId: number): Promise<voi
     if (g.id !== groupId && !g.collapsed) await chrome.tabGroups.update(g.id, { collapsed: true });
   }
 
-  const mru = await getMru(windowId);
+  const mru = await loadMru(windowId);
   if (mru[0] !== groupId) await setMru(windowId, touchMru(mru, groupId));
 }
 

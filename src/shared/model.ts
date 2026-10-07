@@ -48,3 +48,14 @@ export function pickTabToActivate<T extends TabLike>(tabs: readonly T[]): T | un
   }
   return best;
 }
+
+/** Initial MRU when none is recorded (fresh session or extension reload): groups ordered by
+ * the most recent `lastAccessed` of their tabs. */
+export function mruFromTabs(tabs: readonly TabLike[]): number[] {
+  const latest = new Map<number, number>();
+  for (const t of tabs) {
+    if (t.groupId === NO_GROUP) continue;
+    latest.set(t.groupId, Math.max(latest.get(t.groupId) ?? 0, t.lastAccessed ?? 0));
+  }
+  return [...latest.entries()].sort((a, b) => b[1] - a[1]).map(([id]) => id);
+}

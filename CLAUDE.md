@@ -167,7 +167,7 @@ group · `1`–`9` goto tab · `(`/`)` prev/next group · `l` last group · `c` 
 ## Milestones
 
 - [x] **M0** scaffold + spike: probes done; remaining manual checks in `docs/m0-verification.md`
-- [ ] **M1** focus engine: queue, state, onActivated → focusGroup, next/prev/last-group *(implemented, awaiting manual test)*
+- [x] **M1** focus engine: queue, state, onActivated → focusGroup, next/prev/last-group
 - [ ] **M2** auto-grouping: new tabs → active/opener group, strays → Inbox (kept last)
 - [ ] **M3** unified picker: fuzzy search, popup + window fallback, in-group tab navigation
 - [ ] **M4** group management + move tab + leader mode + options page
@@ -220,5 +220,13 @@ here is still an assumption.
   settle, otherwise they hijack restored tabs/groups. The same "untitled first" pattern applies
   to groups the extension creates itself.
 
-Still to verify: PDF / Web Store / fullscreen focus, Ctrl+Tab over collapsed groups, a real
-browser restart (Exit from the menu), saved-group leftovers.
+- **In fullscreen (e.g. a YouTube video) `openPopup()` fails with "Browser window has no
+  toolbar"**; the popup-window fallback takes over and works. Web Store and NTP verified for
+  the action popup.
+- `storage.session` is wiped on extension reload/update (fresh `bootId`), so per-window MRU is
+  seeded from `tab.lastAccessed` whenever it is empty.
+- Chrome split view creates helper tabs `chrome://tab-search.top-chrome/split_new_tab_page.html`
+  that appear (inside the group) and disappear quickly — stray-tab logic must tolerate them.
+
+Still to verify: PDF focus, Ctrl+Tab over collapsed groups, a real browser restart (Exit from
+the menu), saved-group leftovers.
