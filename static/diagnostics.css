@@ -1,0 +1,47 @@
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --fg: #1f1f1f;
+  --muted: #6b6b6b;
+  --border: #d0d0d0;
+  --accent: #1a73e8;
+  --boot: #b06000;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #202124;
+    --fg: #e8eaed;
+    --muted: #9aa0a6;
+    --border: #3c4043;
+    --accent: #8ab4f8;
+    --boot: #fdd663;
+  }
+}
+body {
+  margin: 0;
+  padding: 16px;
+  background: var(--bg);
+  color: var(--fg);
+  font: 14px/1.5 system-ui, sans-serif;
+}
+h1 { font-size: 18px; margin: 0 0 12px; }
+h2 { font-size: 15px; margin: 20px 0 8px; }
+#actions { display: flex; flex-wrap: wrap; gap: 8px; }
+button {
+  font: inherit;
+  padding: 6px 12px;
+  color: var(--fg);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+kbd { font: 12px ui-monospace, Consolas, monospace; color: var(--accent); }
+#status { margin: 10px 0; color: var(--muted); }
+pre {
+  margin: 0;
+  font: 12px/1.45 ui-monospace, Consolas, monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.boot { color: var(--boot); font-weight: 600; }

@@ -1,0 +1,57 @@
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --fg: #1f1f1f;
+  --muted: #6b6b6b;
+  --border: #d0d0d0;
+  --accent: #1a73e8;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #202124;
+    --fg: #e8eaed;
+    --muted: #9aa0a6;
+    --border: #3c4043;
+    --accent: #8ab4f8;
+  }
+}
+html, body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 13px/1.4 system-ui, sans-serif;
+}
+body {
+  width: 560px;
+  min-height: 160px;
+  padding: 10px;
+  box-sizing: border-box;
+}
+/* In the fallback popup window the page fills the window instead. */
+body.in-window {
+  width: auto;
+}
+#query {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  font-size: 15px;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  outline: none;
+}
+#query:focus {
+  border-color: var(--accent);
+}
+#status {
+  margin: 8px 0 4px;
+  color: var(--muted);
+}
+#diag {
+  margin: 0;
+  font: 11px/1.4 ui-monospace, Consolas, monospace;
+  white-space: pre-wrap;
+  color: var(--muted);
+}

@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "Tab Group Sessions",
+  "version": "0.0.1",
+  "description": "tmux-like sessions on top of Chrome Tab Groups, fully keyboard driven.",
+  "minimum_chrome_version": "127",
+  "permissions": ["tabs", "tabGroups", "storage", "alarms"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Tab Group Sessions",
+    "default_popup": "picker.html"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": { "default": "Alt+S" },
+      "description": "Open picker (native action popup)"
+    },
+    "open-picker": {
+      "suggested_key": { "default": "Alt+G" },
+      "description": "Open picker via chrome.action.openPopup()"
+    },
+    "open-picker-window": {
+      "suggested_key": { "default": "Alt+Shift+G" },
+      "description": "Open picker in a popup window (fallback path)"
+    },
+    "open-diagnostics": {
+      "suggested_key": { "default": "Alt+Shift+D" },
+      "description": "Open the diagnostics page"
+    }
+  }
+}
