@@ -175,7 +175,7 @@ group · `1`–`9` goto tab · `(`/`)` prev/next group · `l` last group · `c` 
 
 - [x] **M0** scaffold + spike: probes done; remaining manual checks in `docs/m0-verification.md`
 - [x] **M1** focus engine: queue, state, onActivated → focusGroup, next/prev/last-group
-- [ ] **M2** auto-grouping: new tabs → active/opener group, strays → Inbox (kept last) *(implemented, awaiting manual test)*
+- [x] **M2** auto-grouping: new tabs → active/opener group, strays → Inbox (kept last)
 - [ ] **M3** unified picker: fuzzy search, popup + window fallback, in-group tab navigation
 - [ ] **M4** group management + move tab + leader mode + options page
 - [ ] **M5** snapshots
@@ -233,7 +233,9 @@ here is still an assumption.
 - `storage.session` is wiped on extension reload/update (fresh `bootId`), so per-window MRU is
   seeded from `tab.lastAccessed` whenever it is empty.
 - **Links opened from another app (Teams) get `openerTabId` = the active tab**, exactly like
-  Ctrl+T, are created ungrouped at the end of the strip and activated.
+  Ctrl+T, are created ungrouped at the end of the strip and activated. `tabs.onCreated` for
+  such a tab arrives **before** Chrome's window regains focus, so "no focused Chrome window at
+  creation" reliably identifies external tabs (verified with Teams).
 - Chrome split view creates helper tabs `chrome://tab-search.top-chrome/split_new_tab_page.html`
   that appear (inside the group) and disappear quickly — stray-tab logic must tolerate them.
 
