@@ -140,8 +140,11 @@ Chrome's own "Restore" bubble after the extension already restored).
 Names are final; keys are not chosen yet (user will decide). `chrome.commands` limits:
 max 4 `suggested_key`s; must include Ctrl or Alt (Mac: Command/MacCtrl/Alt); `Ctrl+Alt` is
 forbidden; keys limited to A–Z, 0–9, Comma, Period, Home, End, PageUp, PageDown, Space,
-Insert, Delete, arrows, media keys; Chrome's Ctrl+T/W/N/Tab/1..9 can't be taken; avoid
-Alt+Space (Windows window menu) and Unikey/EVKey hotkeys.
+Insert, Delete, arrows, media keys; Chrome's Ctrl+T/W/N/Tab/1..9 and Alt+G (Gemini) can't be
+taken; avoid Alt+Space (Windows window menu) and Unikey/EVKey hotkeys.
+
+Temporary keys while developing: `Alt+S` action popup, `Alt+Period` / `Alt+Comma`
+next/prev group, `Alt+Shift+D` diagnostics. Everything else unbound.
 
 | Command | Purpose |
 |---|---|
@@ -163,8 +166,8 @@ group · `1`–`9` goto tab · `(`/`)` prev/next group · `l` last group · `c` 
 
 ## Milestones
 
-- [ ] **M0** scaffold + spike: verify Chrome behaviours (see `docs/m0-verification.md`)
-- [ ] **M1** focus engine: queue, state, onActivated → focusGroup, next/prev/last-group
+- [x] **M0** scaffold + spike: probes done; remaining manual checks in `docs/m0-verification.md`
+- [ ] **M1** focus engine: queue, state, onActivated → focusGroup, next/prev/last-group *(implemented, awaiting manual test)*
 - [ ] **M2** auto-grouping: new tabs → active/opener group, strays → Inbox (kept last)
 - [ ] **M3** unified picker: fuzzy search, popup + window fallback, in-group tab navigation
 - [ ] **M4** group management + move tab + leader mode + options page
@@ -174,4 +177,30 @@ group · `1`–`9` goto tab · `(`/`)` prev/next group · `l` last group · `c` 
 
 ## Verified Chrome behaviours
 
-Filled in from M0 results (`docs/m0-verification.md`). Until then, treat as assumptions.
+From M0 probes on Chrome 154 / Windows (`docs/m0-verification.md`). Anything not listed
+here is still an assumption.
+
+- **The API *can* collapse the group that holds the active tab** — no error, the tab stays
+  active inside a collapsed group. So "activate first, then collapse" is mandatory on our side;
+  Chrome will not protect us.
+- Activating a tab inside a collapsed group auto-expands that group (`tabGroups.onUpdated`
+  with `collapsed:false` follows `tabs.onActivated`).
+- `tabs.group({groupId})` puts the tab at the end of the existing group (`tabs.onUpdated`
+  groupId, then `tabs.onMoved`).
+- `tabs.create({active:true})` fires `tabs.onCreated` (groupId -1) **before** `tabs.onActivated`.
+  A real Ctrl+T in a grouped tab behaves the same: new tab at the end of the strip, groupId -1,
+  `openerTabId` = previous tab.
+- `tab.lastAccessed` is available.
+- `tabGroups.move(id, {index: -1})` moves a group to the end of the strip.
+- Removing a group's tabs fires, per tab: `tabs.onUpdated(groupId=-1)` → `tabGroups.onRemoved`
+  → `tabs.onRemoved`. **A closing tab is first ungrouped while it still exists**, so it looks
+  exactly like a tab dragged out of its group. Window close does the same, followed by
+  `tabs.onRemoved(isWindowClosing=true)`. Consequences: stray-tab handling must wait a moment
+  and re-check that the tab still exists; snapshots must not be taken from that transient state.
+- `storage.session` survives service worker restarts (`sw.start freshBoot:false` after idle).
+- Native action popup (`_execute_action`): input has keyboard focus within ~15–30 ms, verified
+  on `chrome://settings` and `chrome://extensions`.
+- `Alt+G` is taken by Chrome (Gemini) — an extension cannot claim it.
+
+Still to verify: `chrome.action.openPopup()` path, popup-window fallback, NTP / PDF / Web Store /
+fullscreen focus, Ctrl+Tab over collapsed groups, boot/restore ordering, saved-group leftovers.

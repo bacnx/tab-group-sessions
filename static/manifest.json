@@ -18,17 +18,26 @@
       "suggested_key": { "default": "Alt+S" },
       "description": "Open picker (native action popup)"
     },
-    "open-picker": {
-      "suggested_key": { "default": "Alt+G" },
-      "description": "Open picker via chrome.action.openPopup()"
+    "next-group": {
+      "suggested_key": { "default": "Alt+Period" },
+      "description": "Focus next group (wraps)"
     },
-    "open-picker-window": {
-      "suggested_key": { "default": "Alt+Shift+G" },
-      "description": "Open picker in a popup window (fallback path)"
+    "prev-group": {
+      "suggested_key": { "default": "Alt+Comma" },
+      "description": "Focus previous group (wraps)"
     },
     "open-diagnostics": {
       "suggested_key": { "default": "Alt+Shift+D" },
       "description": "Open the diagnostics page"
+    },
+    "last-group": {
+      "description": "Toggle to the previously focused group"
+    },
+    "open-picker": {
+      "description": "Open picker via chrome.action.openPopup()"
+    },
+    "open-picker-window": {
+      "description": "Open picker in a popup window (fallback path)"
     }
   }
 }

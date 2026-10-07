@@ -3,6 +3,7 @@
 // titled `tgs-probe-*` so they are recognisable if Chrome keeps them as saved groups.
 
 import { log } from '../shared/log';
+import { ignoredWindows } from './focus';
 
 export interface ProbeResult {
   name: string;
@@ -46,6 +47,7 @@ export async function runProbes(): Promise<ProbeResult[]> {
     add({ name: 'probe-runner', ok: false, detail: { error: 'could not create probe window' } });
     return results;
   }
+  ignoredWindows.add(windowId);
   try {
     const tabs = (await chrome.tabs.query({ windowId })).sort((x, y) => x.index - y.index);
     const [a, b, c] = tabs.map((t) => t.id!);
@@ -131,6 +133,7 @@ export async function runProbes(): Promise<ProbeResult[]> {
     add({ name: 'probe-runner', ok: false, detail: { error: String(err) } });
   } finally {
     await chrome.windows.remove(windowId).catch(() => undefined);
+    ignoredWindows.delete(windowId);
   }
   return results;
 }
