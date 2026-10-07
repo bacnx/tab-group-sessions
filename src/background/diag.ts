@@ -4,7 +4,6 @@
 
 import { log } from '../shared/log';
 import type { Message } from '../shared/messages';
-import { recordTap, runProbes } from './probes';
 import { ensureBoot } from './state';
 
 function shortUrl(url: string | undefined): string | undefined {
@@ -36,43 +35,24 @@ chrome.runtime.onInstalled.addListener((d) => log('runtime.onInstalled', { reaso
 
 // --- tabs ----------------------------------------------------------------------------------
 
-chrome.tabs.onCreated.addListener((t) => {
-  recordTap('tabs.onCreated', `group=${t.groupId}`);
-  log('tabs.onCreated', tabInfo(t));
-});
-chrome.tabs.onActivated.addListener((i) => {
-  recordTap('tabs.onActivated');
-  log('tabs.onActivated', i);
-});
+chrome.tabs.onCreated.addListener((t) => log('tabs.onCreated', tabInfo(t)));
+chrome.tabs.onActivated.addListener((i) => log('tabs.onActivated', i));
 chrome.tabs.onUpdated.addListener((tabId, change) => {
   // Only the fields that matter for grouping/restore; skip noisy title/favicon updates.
   const { groupId, pinned, status, url } = change;
   if (groupId === undefined && pinned === undefined && url === undefined && status !== 'complete') return;
-  recordTap('tabs.onUpdated', groupId !== undefined ? `group=${groupId}` : undefined);
   log('tabs.onUpdated', { tabId, groupId, pinned, status, url: shortUrl(url) });
 });
-chrome.tabs.onRemoved.addListener((tabId, info) => {
-  recordTap('tabs.onRemoved');
-  log('tabs.onRemoved', { tabId, ...info });
-});
+chrome.tabs.onRemoved.addListener((tabId, info) => log('tabs.onRemoved', { tabId, ...info }));
 chrome.tabs.onMoved.addListener((tabId, info) => log('tabs.onMoved', { tabId, ...info }));
 chrome.tabs.onAttached.addListener((tabId, info) => log('tabs.onAttached', { tabId, ...info }));
 chrome.tabs.onDetached.addListener((tabId, info) => log('tabs.onDetached', { tabId, ...info }));
 
 // --- groups --------------------------------------------------------------------------------
 
-chrome.tabGroups.onCreated.addListener((g) => {
-  recordTap('tabGroups.onCreated');
-  log('tabGroups.onCreated', groupInfo(g));
-});
-chrome.tabGroups.onUpdated.addListener((g) => {
-  recordTap('tabGroups.onUpdated');
-  log('tabGroups.onUpdated', groupInfo(g));
-});
-chrome.tabGroups.onRemoved.addListener((g) => {
-  recordTap('tabGroups.onRemoved');
-  log('tabGroups.onRemoved', groupInfo(g));
-});
+chrome.tabGroups.onCreated.addListener((g) => log('tabGroups.onCreated', groupInfo(g)));
+chrome.tabGroups.onUpdated.addListener((g) => log('tabGroups.onUpdated', groupInfo(g)));
+chrome.tabGroups.onRemoved.addListener((g) => log('tabGroups.onRemoved', groupInfo(g)));
 chrome.tabGroups.onMoved.addListener((g) => log('tabGroups.onMoved', groupInfo(g)));
 
 // --- windows -------------------------------------------------------------------------------
@@ -93,17 +73,12 @@ chrome.runtime.onMessage.addListener((msg: Message, _sender, sendResponse) => {
       log(msg.ev, msg.data);
       sendResponse(true);
       return false;
-    case 'run-probes':
-      runProbes().then(sendResponse, (err) => sendResponse({ error: String(err) }));
-      return true;
     case 'dump-state':
       dumpState().then(sendResponse);
       return true;
   }
   return false;
 });
-
-// --- boot detection ------------------------------------------------------------------------
 
 async function dumpState() {
   const windows = await chrome.windows.getAll({ populate: true, windowTypes: ['normal'] });

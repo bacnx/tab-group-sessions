@@ -4,7 +4,6 @@ import type { GroupColor } from './model';
 
 export type Message =
   | { type: 'diag-log'; ev: string; data?: unknown }
-  | { type: 'run-probes' }
   | { type: 'dump-state' }
   | { type: 'capture-snapshot' }
   | { type: 'focus-group'; groupId: number }

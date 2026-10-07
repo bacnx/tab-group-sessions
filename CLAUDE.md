@@ -122,7 +122,7 @@ src/
   picker/              the single keyboard UI (modes: search, move, rename, confirm, color,
                        snapshots, leader). Plain TS + DOM, no framework.
   options/             keyboard-operable settings page
-  diagnostics/         M0 spike / debugging page (event log, probes)
+  diagnostics/         debugging page (event log, snapshots, shortcuts, state dump)
   shared/              types, message protocol, fuzzy matcher, URL normalisation, keymap
 static/                manifest.json and HTML, copied as-is into dist/
 scripts/build.mjs      esbuild build / watch
@@ -248,7 +248,7 @@ reply with an `ActionResult`; errors are shown inline and the picker stays open.
 
 ## Milestones
 
-- [x] **M0** scaffold + spike: probes done; remaining manual checks in `docs/m0-verification.md`
+- [x] **M0** scaffold + spike (probes removed after M7; record in `docs/m0-verification.md`)
 - [x] **M1** focus engine: queue, state, onActivated → focusGroup, next/prev/last-group
 - [x] **M2** auto-grouping: new tabs → active/opener group, strays → Inbox (kept last)
 - [ ] **M3** unified picker: fuzzy search, popup + window fallback, in-group tab navigation *(implemented, awaiting manual test)*

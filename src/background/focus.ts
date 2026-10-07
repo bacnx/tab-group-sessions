@@ -4,11 +4,7 @@
 import { NO_GROUP, mruFromTabs, pickTabToActivate, touchMru } from '../shared/model';
 import { getMru, setMru } from './state';
 
-/** Windows the engine must not touch (the diagnostics probe window). */
-export const ignoredWindows = new Set<number>();
-
 export async function isNormalWindow(windowId: number): Promise<boolean> {
-  if (ignoredWindows.has(windowId)) return false;
   const win = await chrome.windows.get(windowId).catch(() => undefined);
   return win?.type === 'normal';
 }

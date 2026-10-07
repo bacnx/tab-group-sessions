@@ -1,5 +1,9 @@
 # M0 verification checklist
 
+> **Historical.** The automated probes were removed after M7 (see git history before the
+> "Remove M0 probes" commit to run them again). Results live in CLAUDE.md →
+> "Verified Chrome behaviours". Shortcut names below are the old M0 ones.
+
 Goal: confirm the Chrome behaviours the design relies on before building on them.
 Results are recorded in the persisted event log — open **Diagnostics** (`Alt+Shift+D`),
 press `c` to copy the log as JSON and hand it over.

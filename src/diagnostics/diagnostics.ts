@@ -1,5 +1,5 @@
-// Diagnostics page: shows the persisted event log and snapshots, runs the M0 probes.
-// Keyboard only: p = probes, d = dump state, c = copy log, r = refresh, x = clear,
+// Diagnostics page: shows the persisted event log, snapshots and shortcuts.
+// Keyboard only: d = dump state, c = copy log, r = refresh, x = clear,
 // n = snapshot now, v = view latest snapshot.
 
 import { clearLog, readLog, type LogEntry } from '../shared/log';
@@ -34,12 +34,6 @@ async function renderLog() {
 }
 
 const actions: Record<string, () => Promise<void>> = {
-  async p() {
-    status.textContent = 'Running probes (a temporary window will open)…';
-    const results = await send({ type: 'run-probes' });
-    output.textContent = JSON.stringify(results, null, 2);
-    await renderLog();
-  },
   async d() {
     output.textContent = JSON.stringify(await send({ type: 'dump-state' }), null, 2);
   },
@@ -78,7 +72,7 @@ async function renderSnapshots() {
   $<HTMLPreElement>('snapshots').textContent = lines.join('\n') || '(none yet)';
 }
 
-const buttons: Record<string, string> = { probes: 'p', dump: 'd', copy: 'c', refresh: 'r', clear: 'x', snapNow: 'n', snapView: 'v' };
+const buttons: Record<string, string> = { dump: 'd', copy: 'c', refresh: 'r', clear: 'x', snapNow: 'n', snapView: 'v' };
 for (const [id, key] of Object.entries(buttons)) {
   $(id).addEventListener('click', () => void actions[key]?.());
 }
