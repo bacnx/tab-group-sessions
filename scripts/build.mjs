@@ -14,7 +14,7 @@ async function copyStatic() {
   // version bump, so `version` itself stays as written in static/manifest.json).
   const manifestPath = `${outdir}/manifest.json`;
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
-  manifest.version_name = `${manifest.version} (build ${buildTime.slice(0, 16).replace('T', ' ')} UTC)`;
+  manifest.version_name = `${manifest.version} (build ${new Date(buildTime).toLocaleString('sv-SE').slice(0, 16)})`;
   await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}
 `);
 }
