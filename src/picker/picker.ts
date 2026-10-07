@@ -128,7 +128,7 @@ function showLeader(windowId: number): void {
         entries: [
           { keys: ['u'], text: 'Restore from a snapshot', run: go('snapshots') },
           { keys: ['r'], text: 'Reopen closed group', run: cmd(CMD.reopenClosedGroup) },
-          { keys: ['M'], text: 'Merge same-named groups', run: cmd(CMD.mergeDuplicateGroups) },
+          { keys: ['M'], text: 'Merge same-named groups into this window', run: cmd(CMD.mergeDuplicateGroups) },
         ],
       },
       {

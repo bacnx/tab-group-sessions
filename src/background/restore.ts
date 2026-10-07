@@ -10,6 +10,7 @@ import { log } from '../shared/log';
 import { NO_GROUP, isNewTabPageUrl, normalizeTitle, type GroupColor } from '../shared/model';
 import { isNearEmpty, readLiveState } from '../shared/live';
 import type { ActionResult } from '../shared/messages';
+import { planMerges, type DedupeGroup } from '../shared/dedupe';
 import { planIsEmpty, reconcile, type RestorePlan, type WindowPlan } from '../shared/reconcile';
 import { PINNED_SNAPSHOT_KEY, latestGood, type Snapshot } from '../shared/snapshot';
 import { getSettings } from '../shared/settings';
@@ -291,39 +292,44 @@ export function noteGroupCreated(group: chrome.tabGroups.TabGroup): void {
     if (now - boot.at > DEDUPE_WINDOW_MS || (await getPhase()) !== 'ready') return;
     clearTimeout(dedupeTimer);
     dedupeTimer = setTimeout(
-      () => void enqueue('restore.dedupe', async () => void (await mergeDuplicateGroups(group.windowId))),
+      () => void enqueue('restore.dedupe', async () => void (await mergeDuplicateGroups(group.windowId, 'push'))),
       SETTLE_QUIET_MS,
     );
   });
 }
 
-/** Merges groups sharing a (case-insensitive) title into the first one in strip order. Tabs
- * whose URL the kept group already has are closed. Returns how many groups were merged. */
-export async function mergeDuplicateGroups(windowId: number): Promise<number> {
-  const groups = await chrome.tabGroups.query({ windowId });
-  const tabs = (await chrome.tabs.query({ windowId })).sort((a, b) => a.index - b.index);
-  const firstIndex = (id: number) => tabs.findIndex((t) => t.groupId === id);
-  const byTitle = new Map<string, chrome.tabGroups.TabGroup[]>();
-  for (const g of groups) {
-    const key = normalizeTitle(g.title ?? '').toLowerCase();
-    if (!key) continue;
-    byTitle.set(key, [...(byTitle.get(key) ?? []), g]);
-  }
-  let merged = 0;
-  for (const same of byTitle.values()) {
-    if (same.length < 2) continue;
-    same.sort((a, b) => firstIndex(a.id) - firstIndex(b.id));
-    const [keeper, ...dups] = same;
-    const keeperUrls = new Set(tabs.filter((t) => t.groupId === keeper!.id).map((t) => t.url || t.pendingUrl));
-    for (const dup of dups) {
-      const dupTabs = tabs.filter((t) => t.groupId === dup.id && t.id !== undefined);
-      const close = dupTabs.filter((t) => keeperUrls.has(t.url || t.pendingUrl)).map((t) => t.id!);
-      const move = dupTabs.filter((t) => !keeperUrls.has(t.url || t.pendingUrl)).map((t) => t.id!);
-      if (move.length) await groupTabs(move, { groupId: keeper!.id });
-      if (close.length) await chrome.tabs.remove(close);
-      merged++;
+async function readGroups(): Promise<DedupeGroup[]> {
+  const tabs = await chrome.tabs.query({ windowType: 'normal' });
+  return (await chrome.tabGroups.query({})).map((g) => {
+    const members = tabs.filter((t) => t.groupId === g.id && t.id !== undefined).sort((a, b) => a.index - b.index);
+    return {
+      id: g.id,
+      windowId: g.windowId,
+      title: g.title ?? '',
+      index: members[0]?.index ?? 0,
+      tabs: members.map((t) => ({ id: t.id!, url: t.url || t.pendingUrl || '' })),
+    };
+  });
+}
+
+/**
+ * Merges same-named groups (see shared/dedupe.ts). `pull` (manual): inside `windowId`, then
+ * same-named groups of other windows into it. `push` (after a bulk restore into `windowId`):
+ * inside it, then its groups that duplicate another window's group into that group.
+ * Returns how many groups were merged.
+ */
+export async function mergeDuplicateGroups(windowId: number, kind: 'pull' | 'push' = 'pull'): Promise<number> {
+  const merges = planMerges(await readGroups(), { kind, windowId });
+  const touched = new Set<number>();
+  for (const m of merges) {
+    if (m.move.length) {
+      if (m.fromWindowId !== m.intoWindowId) await chrome.tabs.move(m.move, { windowId: m.intoWindowId, index: -1 });
+      await groupTabs(m.move, { groupId: m.into });
     }
+    if (m.close.length) await chrome.tabs.remove(m.close);
+    touched.add(m.fromWindowId).add(m.intoWindowId);
   }
-  if (merged) log('restore.dedupe', { windowId, merged });
-  return merged;
+  for (const id of touched) await syncFocus(id); // a source window may be gone by now: no-op
+  if (merges.length) log('restore.dedupe', { windowId, kind, merges: merges.map(({ from, into, move, close }) => ({ from, into, moved: move.length, closed: close.length })) });
+  return merges.length;
 }

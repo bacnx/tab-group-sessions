@@ -117,13 +117,13 @@ src/
     commands.ts        chrome.commands.onCommand → actions
     launcher.ts        opens the picker: action.openPopup(), falls back to a popup window
     snapshot.ts        capture, debounce, ring buffer, hash dedupe
-    restore.ts         boot detection → settle → reconcile → apply focus
+    restore.ts         boot detection → settle → reconcile → apply focus; duplicate merge
     reconcile.ts       PURE: (snapshot, current state) → plan of operations (unit tested)
   picker/              the single keyboard UI (modes: search, move, rename, confirm, color,
                        snapshots, leader). Plain TS + DOM, no framework.
   options/             keyboard-operable settings page
   diagnostics/         debugging page (event log, snapshots, shortcuts, state dump)
-  shared/              types, message protocol, fuzzy matcher, URL normalisation, keymap
+  shared/              types, message protocol, fuzzy matcher, reconcile + dedupe planners, keymap
 static/                manifest.json and HTML, copied as-is into dist/
 scripts/build.mjs      esbuild build / watch
 ```
@@ -190,11 +190,18 @@ scripts/build.mjs      esbuild build / watch
   Unopenable URLs skipped.
 - Manual restore: picker mode `snapshots` (leader `u`, `50-restore-snapshot`) lists snapshots
   with a preview ("adds N tabs, M groups" / "nothing missing"); Enter merges.
-- Duplicate merge: only when ≥ 2 groups are created within 1 s in a window (a bulk restore,
-  e.g. Chrome's own "Restore" clicked after ours), within 10 min of boot, after boot. Same
-  titles in that window merge into the first in strip order; tabs whose URL the kept group
-  has are closed. Manual: leader `M` / `51-merge-duplicate-groups`. Limitation: duplicates
-  *across* windows (Chrome restoring into a new window) are not merged.
+- Duplicate merge (`shared/dedupe.ts`, pure, tested): a merge moves the duplicate's tabs into
+  the kept group and closes those whose URL the kept group already has. Titles compare
+  case-insensitively; untitled groups never merge; **Inbox never merges across windows**.
+  - Automatic (`push`): when ≥ 2 groups are created within 1 s in a window (a bulk restore,
+    e.g. Chrome's own "Restore" clicked after ours, or Chrome restoring into a new window),
+    within 10 min of boot, after boot. Same titles in that window merge into the first in strip
+    order; then each of its groups that has a same-named group in another window holding
+    ≥ 50 % of its URLs merges into that one (tabs move across windows; an emptied window
+    closes). A same-named group with different content is left alone.
+  - Manual (`pull`, leader `M` / `51-merge-duplicate-groups`): inside the current window, then
+    every same-named group of other windows is pulled into the current window, no overlap
+    required.
 
 ## Commands
 
@@ -233,7 +240,7 @@ the picker into a mode. `Esc` closes. Disabled in Options → `_execute_action` 
 | Find | `s` / `Space` search |
 | Tab | `n` / `p` next/prev tab in group · `1`–`9` goto tab · `m` move tab to group |
 | Group | `)` / `(` next/prev group · `l` last group · `c` new · `,` rename · `k` colour · `{` / `}` move left/right · `x` close |
-| Recovery | `u` restore from a snapshot · `r` reopen closed group · `M` merge same-named groups |
+| Recovery | `u` restore from a snapshot · `r` reopen closed group · `M` merge same-named groups into this window |
 | Other | `o` options |
 
 ### Picker modes

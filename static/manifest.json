@@ -108,7 +108,7 @@
       "description": "Recovery · Restore from a snapshot (only adds what is missing)"
     },
     "51-merge-duplicate-groups": {
-      "description": "Recovery · Merge groups with the same name in this window"
+      "description": "Recovery · Merge groups with the same name into this window (from all windows)"
     },
     "52-reopen-closed-group": {
       "description": "Recovery · Reopen the last group closed from the keyboard"
