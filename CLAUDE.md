@@ -158,17 +158,20 @@ taken; avoid Alt+Space (Windows window menu) and Unikey/EVKey hotkeys.
 Temporary keys while developing: `Alt+S` action popup, `Alt+Period` / `Alt+Comma`
 next/prev group, `Alt+Shift+D` diagnostics. Everything else unbound.
 
-| Command | Purpose |
+Command names live in `src/shared/commands.ts` (`CMD`) and must match `static/manifest.json`
+(enforced by a unit test). Chrome lists commands **sorted by name**, so names carry a numeric
+prefix that groups them on `chrome://extensions/shortcuts`, and descriptions start with the
+category. Renaming a command drops its binding — keep names stable once assigned.
+
+| Prefix | Commands |
 |---|---|
-| `_execute_action` | Leader menu (or the unified picker when leader is disabled) |
-| `open-picker` | Unified search picker |
-| `move-tab` | Move current tab to a group / new group |
-| `next-group`, `prev-group`, `last-group` | Cycle groups (window order) / MRU toggle |
-| `next-tab-in-group`, `prev-tab-in-group` | Cycle tabs inside the current group |
-| `goto-tab-1` … `goto-tab-9` | Nth tab of current group (planned binding: Alt+1..9) |
-| `new-group`, `rename-group`, `close-group`, `set-group-color` | Group management |
-| `move-group-left`, `move-group-right` | Reorder groups |
-| `restore-snapshot`, `reopen-closed-group`, `merge-duplicate-groups` | Recovery |
+| — | `_execute_action` — toolbar popup (picker now; leader menu from M4) |
+| 1x Picker | `10-open-picker` (openPopup, window fallback in fullscreen), `11-open-picker-window` |
+| 2x Group | `20-next-group`, `21-prev-group`, `22-last-group`; M4 adds new/rename/close/color/reorder/move-tab |
+| 3x Tab | `30-next-tab-in-group`, `31-prev-tab-in-group` |
+| 4x Goto | `41-goto-tab-1` … `49-goto-tab-9` (9 = last; planned binding Alt+1..9) |
+| 5x–8x | reserved: recovery (restore-snapshot, reopen-closed-group, merge-duplicate-groups) |
+| 9x Debug | `90-open-diagnostics` |
 
 ### Leader mode (tmux-style, can be disabled in Options)
 
@@ -250,5 +253,7 @@ here is still an assumption.
   and any group restored by the extension — relevant for M6 duplicate handling.
 - The extension keeps working after a real browser exit (menu → Exit) and relaunch.
 
-Not checked (not needed by the design): whether Chrome's Ctrl+Tab skips collapsed groups —
-either way the active-tab rule re-focuses correctly.
+- **Chrome's Ctrl+Tab / Ctrl+Shift+Tab / Ctrl+1..9 skip tabs inside collapsed groups**, so with
+  the focus rule they effectively stay within the open group. Our next/prev-tab-in-group mostly
+  duplicate them (kept for leader `n`/`p`); goto-tab-N still differs (counts only the group's
+  tabs, Chrome's Ctrl+N also counts pinned tabs).

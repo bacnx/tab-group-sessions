@@ -24,67 +24,67 @@
       "suggested_key": {
         "default": "Alt+S"
       },
-      "description": "Open the picker (search groups and tabs)"
+      "description": "Picker · Open (toolbar popup)"
     },
-    "next-group": {
+    "10-open-picker": {
+      "description": "Picker · Open (falls back to a window in fullscreen)"
+    },
+    "11-open-picker-window": {
+      "description": "Picker · Open in a separate window"
+    },
+    "20-next-group": {
       "suggested_key": {
         "default": "Alt+Period"
       },
-      "description": "Focus next group (wraps)"
+      "description": "Group · Next group (wraps)"
     },
-    "prev-group": {
+    "21-prev-group": {
       "suggested_key": {
         "default": "Alt+Comma"
       },
-      "description": "Focus previous group (wraps)"
+      "description": "Group · Previous group (wraps)"
     },
-    "open-diagnostics": {
+    "22-last-group": {
+      "description": "Group · Toggle to the last focused group"
+    },
+    "30-next-tab-in-group": {
+      "description": "Tab · Next tab in the current group (wraps)"
+    },
+    "31-prev-tab-in-group": {
+      "description": "Tab · Previous tab in the current group (wraps)"
+    },
+    "41-goto-tab-1": {
+      "description": "Tab · Go to tab 1 of the current group"
+    },
+    "42-goto-tab-2": {
+      "description": "Tab · Go to tab 2 of the current group"
+    },
+    "43-goto-tab-3": {
+      "description": "Tab · Go to tab 3 of the current group"
+    },
+    "44-goto-tab-4": {
+      "description": "Tab · Go to tab 4 of the current group"
+    },
+    "45-goto-tab-5": {
+      "description": "Tab · Go to tab 5 of the current group"
+    },
+    "46-goto-tab-6": {
+      "description": "Tab · Go to tab 6 of the current group"
+    },
+    "47-goto-tab-7": {
+      "description": "Tab · Go to tab 7 of the current group"
+    },
+    "48-goto-tab-8": {
+      "description": "Tab · Go to tab 8 of the current group"
+    },
+    "49-goto-tab-9": {
+      "description": "Tab · Go to the last tab of the current group"
+    },
+    "90-open-diagnostics": {
       "suggested_key": {
         "default": "Alt+Shift+D"
       },
-      "description": "Open the diagnostics page"
-    },
-    "last-group": {
-      "description": "Toggle to the previously focused group"
-    },
-    "open-picker": {
-      "description": "Open the picker via chrome.action.openPopup()"
-    },
-    "open-picker-window": {
-      "description": "Open the picker in a popup window"
-    },
-    "next-tab-in-group": {
-      "description": "Next tab in the current group (wraps)"
-    },
-    "prev-tab-in-group": {
-      "description": "Previous tab in the current group (wraps)"
-    },
-    "goto-tab-1": {
-      "description": "Go to tab 1 of the current group"
-    },
-    "goto-tab-2": {
-      "description": "Go to tab 2 of the current group"
-    },
-    "goto-tab-3": {
-      "description": "Go to tab 3 of the current group"
-    },
-    "goto-tab-4": {
-      "description": "Go to tab 4 of the current group"
-    },
-    "goto-tab-5": {
-      "description": "Go to tab 5 of the current group"
-    },
-    "goto-tab-6": {
-      "description": "Go to tab 6 of the current group"
-    },
-    "goto-tab-7": {
-      "description": "Go to tab 7 of the current group"
-    },
-    "goto-tab-8": {
-      "description": "Go to tab 8 of the current group"
-    },
-    "goto-tab-9": {
-      "description": "Go to the last tab of the current group"
+      "description": "Debug · Open the diagnostics page"
     }
   }
 }

@@ -1,5 +1,6 @@
 // chrome.commands → actions. Commands act on the last-focused normal window.
 
+import { CMD, parseGotoTab } from '../shared/commands';
 import { cycleGroup, cycleTabInGroup, gotoTabInGroup, lastGroup } from './actions';
 import { isNormalWindow } from './focus';
 import { openPicker, openPickerWindow } from './launcher';
@@ -14,13 +15,13 @@ async function targetWindowId(tab: chrome.tabs.Tab | undefined): Promise<number 
 export function handleCommand(command: string, tab: chrome.tabs.Tab | undefined): void {
   // UI launchers run outside the queue: openPopup must be called promptly.
   switch (command) {
-    case 'open-picker':
+    case CMD.openPicker:
       void openPicker(tab?.windowId);
       return;
-    case 'open-picker-window':
+    case CMD.openPickerWindow:
       void openPickerWindow(tab?.windowId);
       return;
-    case 'open-diagnostics':
+    case CMD.openDiagnostics:
       void chrome.tabs.create({ url: chrome.runtime.getURL('diagnostics.html') });
       return;
   }
@@ -29,18 +30,18 @@ export function handleCommand(command: string, tab: chrome.tabs.Tab | undefined)
     const windowId = await targetWindowId(tab);
     if (windowId === undefined) return;
     switch (command) {
-      case 'next-group':
+      case CMD.nextGroup:
         return cycleGroup(windowId, 1);
-      case 'prev-group':
+      case CMD.prevGroup:
         return cycleGroup(windowId, -1);
-      case 'last-group':
+      case CMD.lastGroup:
         return lastGroup(windowId);
-      case 'next-tab-in-group':
+      case CMD.nextTabInGroup:
         return cycleTabInGroup(windowId, 1);
-      case 'prev-tab-in-group':
+      case CMD.prevTabInGroup:
         return cycleTabInGroup(windowId, -1);
     }
-    const goto = /^goto-tab-([1-9])$/.exec(command);
-    if (goto) return gotoTabInGroup(windowId, Number(goto[1]));
+    const n = parseGotoTab(command);
+    if (n !== undefined) return gotoTabInGroup(windowId, n);
   });
 }
