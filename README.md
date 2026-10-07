@@ -143,3 +143,7 @@ pnpm typecheck
 pnpm test        # vitest, pure logic in src/shared
 pnpm dev         # watch build
 ```
+
+## License
+
+[MIT](LICENSE)
