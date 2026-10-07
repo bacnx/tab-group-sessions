@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NO_GROUP, cycle, decidePlacement, groupOrder, isTitleTaken, moveGroupIndex, mruFromTabs, nthItem, titleError, pickTabToActivate, touchMru, type TabLike } from './model';
+import { NO_GROUP, cycle, decidePlacement, isNewTabPageUrl, groupOrder, isTitleTaken, moveGroupIndex, mruFromTabs, nthItem, titleError, pickTabToActivate, touchMru, type TabLike } from './model';
 
 const tab = (index: number, groupId: number, extra: Partial<TabLike> = {}): TabLike => ({
   id: index + 100,
@@ -165,5 +165,14 @@ describe('moveGroupIndex', () => {
   it('never moves past or moves the pinned-last group', () => {
     expect(moveGroupIndex(tabs, 3, 1, 9)).toBeUndefined();
     expect(moveGroupIndex(tabs, 9, -1, 9)).toBeUndefined();
+  });
+});
+
+describe('isNewTabPageUrl', () => {
+  it('recognises the New Tab page only', () => {
+    expect(isNewTabPageUrl('chrome://newtab/')).toBe(true);
+    expect(isNewTabPageUrl('chrome://new-tab-page/')).toBe(true);
+    expect(isNewTabPageUrl('https://teams.microsoft.com/')).toBe(false);
+    expect(isNewTabPageUrl(undefined)).toBe(false);
   });
 });

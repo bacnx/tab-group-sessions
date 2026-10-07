@@ -46,7 +46,9 @@ Shortcuts: `chrome://extensions/shortcuts`. Suggested keys in the manifest only 
    focus** (Ctrl+T, bookmark, link from an ungrouped tab, extension-created) → opener's group,
    else the active (MRU) group; a new tab created **while Chrome had no focus** (link clicked in
    another app) → Inbox; any other stray (dragged out, restored ungrouped, unpinned) → Inbox.
-   Focus is tracked via `windows.onFocusChanged` (memory + `storage.session`).
+   Focus is tracked via `windows.onFocusChanged` (memory + `storage.session`), corrected by
+   evidence the user is in Chrome: a keyboard command, the picker's runtime port opening or
+   closing. A tab that opens on the New Tab page is always internal.
    `openerTabId` is useless for this: Chrome sets it to the active tab for external links too. Placement runs in a per-window sweep
    debounced to 300 ms of quiet (max 3 s), never directly from a single event.
 4. **Unified picker** (one fuzzy search over groups *and* tabs, all windows):
@@ -271,6 +273,12 @@ here is still an assumption.
   Ctrl+T, are created ungrouped at the end of the strip and activated. `tabs.onCreated` for
   such a tab arrives **before** Chrome's window regains focus, so "no focused Chrome window at
   creation" reliably identifies external tabs (verified with Teams).
+- **Opening an extension popup reports `windows.onFocusChanged(WINDOW_ID_NONE)`, and closing
+  it reports nothing** — focus silently returns to the browser window. Focus tracking alone
+  therefore misclassified every Ctrl+T after using the picker as external.
+- Extension pages (diagnostics, picker) load fresh files from `dist/` on open, but the manifest
+  and service worker only change on **reload** — the diagnostics `build` line can be newer
+  than the running worker (compare with `sw.start.build`).
 - Chrome split view creates helper tabs `chrome://tab-search.top-chrome/split_new_tab_page.html`
   that appear (inside the group) and disappear quickly — stray-tab logic must tolerate them.
 

@@ -17,6 +17,9 @@ if (inWindow) document.body.classList.add('in-window');
 
 const closePicker = () => window.close();
 
+// Lets the service worker know a picker is open (see grouping.ts focus tracking).
+chrome.runtime.connect({ name: 'picker' });
+
 async function resolveWindowId(): Promise<number> {
   const origin = Number(params.get('origin'));
   if (inWindow && Number.isFinite(origin) && origin > 0) return origin;

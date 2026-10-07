@@ -9,7 +9,7 @@
 // After a short quiet period the sweep re-reads the window and only then acts.
 
 import { log } from '../shared/log';
-import { INBOX_TITLE, NO_GROUP, decidePlacement, groupOrder } from '../shared/model';
+import { INBOX_TITLE, NO_GROUP, decidePlacement, groupOrder, isNewTabPageUrl } from '../shared/model';
 import { getActiveTab, isNormalWindow, loadMru } from './focus';
 import { enqueue } from './queue';
 
@@ -30,19 +30,49 @@ const newTabs = new Map<number, NewTab>();
 
 // Whether any Chrome window has focus. Kept in memory and mirrored to storage.session because
 // the service worker usually sleeps while the user is in another app.
+//
+// windows.onFocusChanged alone is not enough: opening an extension popup (our picker) reports
+// WINDOW_ID_NONE, and closing it does NOT report the browser window again. So the focus flag
+// is also set by evidence that the user is in Chrome: a keyboard command, or the picker
+// being open/closed (tracked through a runtime port).
 const FOCUS_KEY = 'chromeFocused';
 let chromeFocused: boolean | undefined;
+let openPickers = 0;
+
+function setChromeFocused(focused: boolean): void {
+  chromeFocused = focused;
+  void chrome.storage.session.set({ [FOCUS_KEY]: focused });
+}
 
 export function recordFocusChange(windowId: number): void {
-  chromeFocused = windowId !== chrome.windows.WINDOW_ID_NONE;
-  void chrome.storage.session.set({ [FOCUS_KEY]: chromeFocused });
+  const focused = windowId !== chrome.windows.WINDOW_ID_NONE;
+  if (!focused && openPickers > 0) return; // focus moved into our own popup
+  setChromeFocused(focused);
+}
+
+/** A keyboard command fired: Chrome has focus. */
+export function recordUserInChrome(): void {
+  setChromeFocused(true);
+}
+
+/** Picker pages hold a port named 'picker' while open. */
+export function trackPickerPort(port: chrome.runtime.Port): void {
+  if (port.name !== 'picker') return;
+  openPickers++;
+  setChromeFocused(true);
+  port.onDisconnect.addListener(() => {
+    openPickers = Math.max(0, openPickers - 1);
+    setChromeFocused(true); // focus returns to the browser window, without an event
+  });
 }
 
 export function recordNewTab(tab: chrome.tabs.Tab): void {
   if (tab.id === undefined) return;
   const entry: NewTab = { openerTabId: tab.openerTabId, at: Date.now() };
   newTabs.set(tab.id, entry);
-  if (chromeFocused !== undefined) {
+  if (isNewTabPageUrl(tab.pendingUrl || tab.url)) {
+    entry.external = false; // Ctrl+T / + button; other apps never open the New Tab page
+  } else if (chromeFocused !== undefined) {
     entry.external = !chromeFocused;
   } else {
     // Issued before any later focus event is handled, so it reads the pre-creation value.

@@ -5,7 +5,7 @@ import './diag';
 import { activateTab, focusGroupById, handleGroupRemoved } from './actions';
 import { handleCommand, runCommand } from './commands';
 import { syncFocus } from './focus';
-import { recordFocusChange, recordNewTab, scheduleSweep, scheduleSweepAll } from './grouping';
+import { recordFocusChange, recordNewTab, recordUserInChrome, scheduleSweep, scheduleSweepAll, trackPickerPort } from './grouping';
 import { forgetPickerWindow } from './launcher';
 import { enqueue } from './queue';
 import type { ActionResult, Message } from '../shared/messages';
@@ -42,6 +42,7 @@ chrome.tabGroups.onRemoved.addListener((group) => {
 });
 
 chrome.windows.onFocusChanged.addListener(recordFocusChange);
+chrome.runtime.onConnect.addListener(trackPickerPort);
 
 chrome.windows.onCreated.addListener((win) => {
   if (win.id !== undefined) scheduleSweep(win.id);
@@ -54,7 +55,10 @@ chrome.windows.onRemoved.addListener((windowId) => {
   });
 });
 
-chrome.commands.onCommand.addListener(handleCommand);
+chrome.commands.onCommand.addListener((command, tab) => {
+  recordUserInChrome();
+  handleCommand(command, tab);
+});
 
 /** Runs a validating action in the queue and replies with its result. */
 function reply(label: string, action: () => Promise<ActionResult>, sendResponse: (r: ActionResult) => void): true {

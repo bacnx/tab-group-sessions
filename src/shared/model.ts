@@ -62,6 +62,11 @@ export function mruFromTabs(tabs: readonly TabLike[]): number[] {
 
 export const INBOX_TITLE = 'Inbox';
 
+/** Chrome's New Tab page — only ever opened from inside Chrome (Ctrl+T, + button). */
+export function isNewTabPageUrl(url: string | undefined): boolean {
+  return url === 'chrome://newtab/' || url === 'chrome://new-tab-page/';
+}
+
 export type Placement = { kind: 'group'; groupId: number } | { kind: 'inbox' };
 
 export interface PlacementInput {
