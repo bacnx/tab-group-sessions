@@ -144,6 +144,22 @@ scripts/build.mjs      esbuild build / watch
   state). A snapshot that drops > 50 % of tabs is stored but flagged `suspicious` and skipped
   by restore.
 
+### Snapshots (M5)
+
+- `shared/snapshot.ts` (pure, tested) builds `Snapshot { id, ts, hash, tabCount, suspicious,
+  windows[] }`; each window has `pinned`, `groups[]` (strip order: title, color, collapsed,
+  tabs `{url,title}`), `ungrouped`, `activeGroup`, `focused`. Not saved: New Tab page,
+  split-view helpers, our own extension pages. Windows with nothing restorable are dropped.
+- `background/snapshot.ts`: every tab/group change calls `markDirty()` → write after
+  `snapshotDelaySec` (default 3) of quiet; a 1-minute `chrome.alarms` alarm writes a pending
+  dirty state if the worker died first. Tab title changes don't trigger (read at capture).
+- Skipped when identical to the latest (FNV-1a hash), when no normal window exists, within 2 s
+  of a window closing (`isWindowClosing` cancels the pending write), and for 20 s after a fresh
+  start (placeholder until M6 settle detection).
+- Ring buffer `storage.local.snapshots`, newest first, `snapshotCount` (default 10); a snapshot
+  losing > 50 % of ≥ 6 tabs is `suspicious`; trimming never evicts the latest good one.
+- Diagnostics: list of snapshots, `n` capture now, `v` view the latest as JSON.
+
 ### Restore algorithm
 
 1. Fresh boot (no `bootId`) → `phase = booting`.
@@ -214,8 +230,8 @@ reply with an `ActionResult`; errors are shown inline and the picker stays open.
 - [x] **M1** focus engine: queue, state, onActivated → focusGroup, next/prev/last-group
 - [x] **M2** auto-grouping: new tabs → active/opener group, strays → Inbox (kept last)
 - [ ] **M3** unified picker: fuzzy search, popup + window fallback, in-group tab navigation *(implemented, awaiting manual test)*
-- [ ] **M4** group management + move tab + leader mode + options page *(implemented, awaiting manual test)*
-- [ ] **M5** snapshots
+- [x] **M4** group management + move tab + leader mode + options page
+- [ ] **M5** snapshots *(implemented, awaiting manual test)*
 - [ ] **M6** restore + duplicate merge
 - [ ] **M7** polish: reopen closed group, etc.
 

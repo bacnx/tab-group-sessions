@@ -5,6 +5,7 @@
 import { log } from '../shared/log';
 import type { Message } from '../shared/messages';
 import { recordTap, runProbes } from './probes';
+import { ensureBoot } from './state';
 
 function shortUrl(url: string | undefined): string | undefined {
   if (!url) return url;
@@ -129,14 +130,12 @@ async function summary() {
 }
 
 void (async () => {
-  const { bootId } = await chrome.storage.session.get('bootId');
-  if (bootId) {
-    log('sw.start', { freshBoot: false, bootId, build: __BUILD_TIME__ });
+  const boot = await ensureBoot();
+  if (!boot.fresh) {
+    log('sw.start', { freshBoot: false, bootId: boot.id, build: __BUILD_TIME__ });
     return;
   }
-  const id = crypto.randomUUID();
-  await chrome.storage.session.set({ bootId: id });
-  log('sw.start', { freshBoot: true, build: __BUILD_TIME__, bootId: id, state: await summary() });
+  log('sw.start', { freshBoot: true, build: __BUILD_TIME__, bootId: boot.id, state: await summary() });
   // Sample the state while Chrome restores the previous session, to learn how long it takes.
   for (const ms of [1000, 3000, 6000, 10000, 15000]) {
     setTimeout(() => void summary().then((s) => log('boot.sample', { ms, ...s })), ms);

@@ -9,7 +9,7 @@
 <body>
   <main>
     <h1>Tab Group Sessions</h1>
-    <p class="hint">Tab / Shift+Tab to move · Space to toggle · Enter to activate</p>
+    <p class="hint">Tab / Shift+Tab to move · Space to toggle · ↑/↓ to change numbers · Enter to activate</p>
 
     <section>
       <label class="setting">
@@ -19,6 +19,18 @@
           <small>The toolbar shortcut (<code>_execute_action</code>) opens a tmux-style key menu.
           Off: it opens the search picker directly.</small>
         </span>
+      </label>
+    </section>
+
+    <section>
+      <h2>Snapshots</h2>
+      <label class="field">
+        <span>Snapshots to keep</span>
+        <input id="snapshotCount" type="number" min="1" max="50" step="1" />
+      </label>
+      <label class="field">
+        <span>Seconds of quiet before writing a snapshot</span>
+        <input id="snapshotDelaySec" type="number" min="1" max="60" step="1" />
       </label>
     </section>
 

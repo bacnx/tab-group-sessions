@@ -6,6 +6,7 @@ export type Message =
   | { type: 'diag-log'; ev: string; data?: unknown }
   | { type: 'run-probes' }
   | { type: 'dump-state' }
+  | { type: 'capture-snapshot' }
   | { type: 'focus-group'; groupId: number }
   | { type: 'activate-tab'; tabId: number }
   | { type: 'run-command'; command: string; windowId: number }

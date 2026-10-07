@@ -1,8 +1,10 @@
-// Diagnostics page: shows the persisted event log and runs the M0 probes. Keyboard only:
-// p = probes, d = dump state, c = copy log, r = refresh, x = clear.
+// Diagnostics page: shows the persisted event log and snapshots, runs the M0 probes.
+// Keyboard only: p = probes, d = dump state, c = copy log, r = refresh, x = clear,
+// n = snapshot now, v = view latest snapshot.
 
 import { clearLog, readLog, type LogEntry } from '../shared/log';
 import { send } from '../shared/messages';
+import { SNAPSHOTS_KEY, type Snapshot } from '../shared/snapshot';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const status = $<HTMLDivElement>('status');
@@ -54,9 +56,29 @@ const actions: Record<string, () => Promise<void>> = {
     await clearLog();
     await renderLog();
   },
+  async n() {
+    const snap = await send<Snapshot | undefined>({ type: 'capture-snapshot' });
+    status.textContent = snap ? `Snapshot saved (${snap.tabCount} tabs)` : 'Nothing saved (unchanged, or no window)';
+  },
+  async v() {
+    output.textContent = JSON.stringify((await readSnapshots())[0] ?? null, null, 2);
+  },
 };
 
-const buttons: Record<string, string> = { probes: 'p', dump: 'd', copy: 'c', refresh: 'r', clear: 'x' };
+async function readSnapshots(): Promise<Snapshot[]> {
+  return ((await chrome.storage.local.get(SNAPSHOTS_KEY))[SNAPSHOTS_KEY] as Snapshot[] | undefined) ?? [];
+}
+
+async function renderSnapshots() {
+  const lines = (await readSnapshots()).map((s) => {
+    const groups = s.windows.reduce((n, w) => n + w.groups.length, 0);
+    const flag = s.suspicious ? '  SUSPICIOUS' : '';
+    return `${new Date(s.ts).toLocaleString('en-GB')}  ${s.tabCount} tabs · ${groups} groups · ${s.windows.length} window(s)${flag}`;
+  });
+  $<HTMLPreElement>('snapshots').textContent = lines.join('\n') || '(none yet)';
+}
+
+const buttons: Record<string, string> = { probes: 'p', dump: 'd', copy: 'c', refresh: 'r', clear: 'x', snapNow: 'n', snapView: 'v' };
 for (const [id, key] of Object.entries(buttons)) {
   $(id).addEventListener('click', () => void actions[key]?.());
 }
@@ -76,6 +98,10 @@ async function renderCommands() {
   $<HTMLPreElement>('commands').textContent = [`build ${__BUILD_TIME__}`, ...lines].join('\n');
 }
 
-chrome.storage.local.onChanged.addListener(() => void renderLog());
+chrome.storage.local.onChanged.addListener(() => {
+  void renderLog();
+  void renderSnapshots();
+});
+void renderSnapshots();
 void renderCommands();
 void renderLog();

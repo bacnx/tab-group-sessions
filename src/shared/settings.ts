@@ -3,9 +3,13 @@
 export interface Settings {
   /** `_execute_action` opens the tmux-style leader menu instead of the search picker. */
   leaderEnabled: boolean;
+  /** How many snapshots to keep (newest first). */
+  snapshotCount: number;
+  /** Quiet time after the last tab/group change before a snapshot is written. */
+  snapshotDelaySec: number;
 }
 
-export const DEFAULT_SETTINGS: Settings = { leaderEnabled: true };
+export const DEFAULT_SETTINGS: Settings = { leaderEnabled: true, snapshotCount: 10, snapshotDelaySec: 3 };
 
 const KEY = 'settings';
 

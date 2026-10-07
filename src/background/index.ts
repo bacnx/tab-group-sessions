@@ -11,6 +11,7 @@ import { enqueue } from './queue';
 import type { ActionResult, Message } from '../shared/messages';
 import { NO_GROUP } from '../shared/model';
 import { closeGroup, moveActiveTab, newGroup, renameGroup, setGroupColor } from './manage';
+import { SNAPSHOT_ALARM, capture, captureIfDirty, markDirty, windowClosing } from './snapshot';
 import { clearWindowState } from './state';
 
 chrome.tabs.onActivated.addListener(({ windowId }) => {
@@ -112,3 +113,40 @@ chrome.runtime.onInstalled.addListener(() => {
 // Give Chrome's session restore time to finish before adopting strays (proper boot
 // detection and reconcile come with M6).
 chrome.runtime.onStartup.addListener(() => void scheduleSweepAll(3000));
+
+// --- snapshots -----------------------------------------------------------------------------
+
+chrome.tabs.onCreated.addListener(markDirty);
+chrome.tabs.onMoved.addListener(markDirty);
+chrome.tabs.onAttached.addListener(markDirty);
+chrome.tabs.onDetached.addListener(markDirty);
+chrome.tabs.onUpdated.addListener((_tabId, change) => {
+  // Titles change all the time (notification counters); they are read at capture time anyway.
+  if (change.url !== undefined || change.groupId !== undefined || change.pinned !== undefined) markDirty();
+});
+chrome.tabs.onRemoved.addListener((_tabId, { isWindowClosing }) => {
+  if (isWindowClosing) windowClosing();
+  else markDirty();
+});
+chrome.tabGroups.onCreated.addListener(markDirty);
+chrome.tabGroups.onUpdated.addListener(markDirty);
+chrome.tabGroups.onRemoved.addListener(markDirty);
+chrome.tabGroups.onMoved.addListener(markDirty);
+
+// Safety net for a service worker that died before its debounce timer fired.
+function ensureSnapshotAlarm(): void {
+  void chrome.alarms.create(SNAPSHOT_ALARM, { periodInMinutes: 1 });
+}
+chrome.runtime.onInstalled.addListener(ensureSnapshotAlarm);
+chrome.runtime.onStartup.addListener(ensureSnapshotAlarm);
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === SNAPSHOT_ALARM) void enqueue('snapshot.alarm', () => captureIfDirty());
+});
+
+chrome.runtime.onMessage.addListener((msg: Message, _sender, sendResponse) => {
+  if (msg.type !== 'capture-snapshot') return false;
+  void enqueue('snapshot.manual', async () => {
+    sendResponse(await capture());
+  });
+  return true;
+});
