@@ -12,6 +12,7 @@ import { log } from '../shared/log';
 import { INBOX_TITLE, NO_GROUP, decidePlacement, groupOrder, isNewTabPageUrl } from '../shared/model';
 import { getActiveTab, isNormalWindow, loadMru } from './focus';
 import { enqueue } from './queue';
+import { isReady } from './state';
 
 const QUIET_MS = 300;
 const MAX_WAIT_MS = 3000;
@@ -127,6 +128,9 @@ export function findInbox(groups: chrome.tabGroups.TabGroup[]): chrome.tabGroups
 
 async function sweepWindow(windowId: number): Promise<void> {
   pruneNewTabs();
+  // While Chrome is restoring the session, restored tabs pass through ungrouped states;
+  // restore.ts sweeps every window once booting is over.
+  if (!(await isReady())) return;
   if (!(await isNormalWindow(windowId))) return;
 
   const tabs = await chrome.tabs.query({ windowId });

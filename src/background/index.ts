@@ -11,6 +11,7 @@ import { enqueue } from './queue';
 import type { ActionResult, Message } from '../shared/messages';
 import { NO_GROUP } from '../shared/model';
 import { closeGroup, moveActiveTab, newGroup, renameGroup, setGroupColor } from './manage';
+import { checkNewWindow, noteActivity, noteGroupCreated, restoreSnapshot, runBootFlow } from './restore';
 import { SNAPSHOT_ALARM, capture, captureIfDirty, markDirty, windowClosing } from './snapshot';
 import { clearWindowState } from './state';
 
@@ -93,6 +94,8 @@ chrome.runtime.onMessage.addListener((msg: Message, _sender, sendResponse) => {
       return reply('picker.close-group', () => closeGroup(msg.groupId), sendResponse);
     case 'set-group-color':
       return reply('picker.set-group-color', () => setGroupColor(msg.groupId, msg.color), sendResponse);
+    case 'restore-snapshot':
+      return reply('picker.restore-snapshot', () => restoreSnapshot(msg.snapshotId), sendResponse);
     default:
       return false;
   }
@@ -150,3 +153,28 @@ chrome.runtime.onMessage.addListener((msg: Message, _sender, sendResponse) => {
   });
   return true;
 });
+
+// --- boot / restore ------------------------------------------------------------------------
+
+// Settle detection: structural changes only (page loads don't count).
+chrome.tabs.onCreated.addListener(noteActivity);
+chrome.tabs.onRemoved.addListener(noteActivity);
+chrome.tabs.onMoved.addListener(noteActivity);
+chrome.tabs.onAttached.addListener(noteActivity);
+chrome.tabs.onUpdated.addListener((_tabId, change) => {
+  if (change.groupId !== undefined || change.pinned !== undefined) noteActivity();
+});
+chrome.tabGroups.onCreated.addListener((group) => {
+  noteActivity();
+  noteGroupCreated(group);
+});
+chrome.tabGroups.onUpdated.addListener(noteActivity);
+chrome.tabGroups.onRemoved.addListener(noteActivity);
+chrome.tabGroups.onMoved.addListener(noteActivity);
+chrome.windows.onCreated.addListener((win) => {
+  noteActivity();
+  if (win.type === 'normal') void checkNewWindow();
+});
+
+// Every service worker start: a no-op unless this browser session hasn't been reconciled yet.
+void runBootFlow();

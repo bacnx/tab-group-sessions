@@ -3,6 +3,7 @@
 import { getSettings, updateSettings, type Settings } from '../shared/settings';
 
 const leader = document.getElementById('leaderEnabled') as HTMLInputElement;
+const discard = document.getElementById('discardOnRestore') as HTMLInputElement;
 const status = document.getElementById('status') as HTMLParagraphElement;
 
 type NumberKey = { [K in keyof Settings]: Settings[K] extends number ? K : never }[keyof Settings];
@@ -11,6 +12,7 @@ const numberFields: NumberKey[] = ['snapshotCount', 'snapshotDelaySec'];
 async function main(): Promise<void> {
   const settings = await getSettings();
   leader.checked = settings.leaderEnabled;
+  discard.checked = settings.discardOnRestore;
   for (const key of numberFields) {
     const input = document.getElementById(key) as HTMLInputElement;
     input.value = String(settings[key]);
@@ -28,6 +30,11 @@ async function main(): Promise<void> {
 
 leader.addEventListener('change', async () => {
   await updateSettings({ leaderEnabled: leader.checked });
+  status.textContent = 'Saved.';
+});
+
+discard.addEventListener('change', async () => {
+  await updateSettings({ discardOnRestore: discard.checked });
   status.textContent = 'Saved.';
 });
 

@@ -154,25 +154,41 @@ scripts/build.mjs      esbuild build / watch
   `snapshotDelaySec` (default 3) of quiet; a 1-minute `chrome.alarms` alarm writes a pending
   dirty state if the worker died first. Tab title changes don't trigger (read at capture).
 - Skipped when identical to the latest (FNV-1a hash), when no normal window exists, within 2 s
-  of a window closing (`isWindowClosing` cancels the pending write), and for 20 s after a fresh
-  start (placeholder until M6 settle detection).
+  of a window closing (`isWindowClosing` cancels the pending write), and while booting.
 - Ring buffer `storage.local.snapshots`, newest first, `snapshotCount` (default 10); a snapshot
   losing > 50 % of ≥ 6 tabs is `suspicious`; trimming never evicts the latest good one.
 - Diagnostics: list of snapshots, `n` capture now, `v` view the latest as JSON.
 
-### Restore algorithm
+### Restore (M6)
 
-1. Fresh boot (no `bootId`) → `phase = booting`.
-2. Wait until no tab/group events for 2 s (min 3 s, max 15 s).
-3. `reconcile(latest good snapshot, current)`: match windows by group-title/URL overlap,
-   groups by title (fallback: URL Jaccard ≥ 0.5), tabs by normalised URL as a multiset.
-   Output: groups/tabs/windows to create.
-4. Apply according to the auto-restore policy, then refocus each window's previously active group.
-
-Duplicate protection comes from the merge being idempotent (running it twice is a no-op) plus
-a timed lock in `storage.session`. Safety net: for 10 min after boot, a newly created group
-whose title duplicates an existing one in the same window is merged into it (covers clicking
-Chrome's own "Restore" bubble after the extension already restored).
+- `shared/reconcile.ts` (pure, tested): `reconcile(snapshot.windows, live) → RestorePlan`.
+  Windows are paired greedily by URL overlap + 5 × shared group titles; leftover snapshot
+  windows reuse leftover live windows without groups, else become **new windows** (decided).
+  Groups match by case-insensitive title, untitled ones by URL Jaccard ≥ 0.5. Tabs are a
+  URL multiset per window: a tab already open anywhere in the window (or, for new windows,
+  anywhere left over in the browser) counts as present. Stray ungrouped snapshot tabs go to
+  Inbox. The plan only adds; reconciling after applying it yields an empty plan (tested).
+- `background/restore.ts`, boot flow (every SW start, no-op once `phase = ready`):
+  1. `phase = booting` → stray sweep and snapshots are paused.
+  2. Wait until no structural tab/group event for 2 s (min 3 s, max 15 s from boot).
+  3. Pin the previous session's latest good snapshot (`storage.local.pinnedSnapshotId`) — the
+     ring buffer never evicts it, the restore picker lists it first as "last session".
+  4. Reconcile. Near-empty live state (no groups, ≤ 2 tabs) → restore automatically.
+     Otherwise a non-empty plan → red `!` badge + tooltip, nothing restored.
+  5. Re-apply focus in every window: Chrome's restored active tab wins if grouped, else the
+     snapshot's active group. 6. `phase = ready`, sweep all windows, take a snapshot.
+- A normal window created later while it is the only one (Chrome reopened from background)
+  gets the same near-empty auto-restore.
+- Execution: tabs created inactive, grouped in the same queued task (the stray sweep never
+  sees them), groups get title/colour and start collapsed; a new window's placeholder New Tab
+  is removed; tabs are discarded if `discardOnRestore` (default on). Unopenable URLs skipped.
+- Manual restore: picker mode `snapshots` (leader `u`, `50-restore-snapshot`) lists snapshots
+  with a preview ("adds N tabs, M groups" / "nothing missing"); Enter merges.
+- Duplicate merge: only when ≥ 2 groups are created within 1 s in a window (a bulk restore,
+  e.g. Chrome's own "Restore" clicked after ours), within 10 min of boot, after boot. Same
+  titles in that window merge into the first in strip order; tabs whose URL the kept group
+  has are closed. Manual: leader `M` / `51-merge-duplicate-groups`. Limitation: duplicates
+  *across* windows (Chrome restoring into a new window) are not merged.
 
 ## Commands
 
@@ -197,7 +213,8 @@ category. Renaming a command drops its binding — keep names stable once assign
 | 2x Group | `20-next-group`, `21-prev-group`, `22-last-group`, `23-move-tab`, `24-new-group`, `25-rename-group`, `26-close-group`, `27-set-group-color`, `28-move-group-left`, `29-move-group-right` |
 | 3x Tab | `30-next-tab-in-group`, `31-prev-tab-in-group` |
 | 4x Goto | `41-goto-tab-1` … `49-goto-tab-9` (9 = last; planned binding Alt+1..9) |
-| 5x–8x | reserved: recovery (restore-snapshot, reopen-closed-group, merge-duplicate-groups) |
+| 5x Recovery | `50-restore-snapshot`, `51-merge-duplicate-groups`; reserved `52-reopen-closed-group` (M7) |
+| 6x–8x | reserved |
 | 9x Debug | `90-open-diagnostics` |
 
 ### Leader mode (tmux-style, toggle in Options)
@@ -210,9 +227,8 @@ the picker into a mode. `Esc` closes. Disabled in Options → `_execute_action` 
 | Find | `s` / `Space` search |
 | Tab | `n` / `p` next/prev tab in group · `1`–`9` goto tab · `m` move tab to group |
 | Group | `)` / `(` next/prev group · `l` last group · `c` new · `,` rename · `k` colour · `{` / `}` move left/right · `x` close |
+| Recovery | `u` restore from a snapshot · `M` merge same-named groups |
 | Other | `o` options |
-
-Reserved for M6/M7: `u` restore snapshot.
 
 ### Picker modes
 
@@ -232,7 +248,7 @@ reply with an `ActionResult`; errors are shown inline and the picker stays open.
 - [ ] **M3** unified picker: fuzzy search, popup + window fallback, in-group tab navigation *(implemented, awaiting manual test)*
 - [x] **M4** group management + move tab + leader mode + options page
 - [x] **M5** snapshots
-- [ ] **M6** restore + duplicate merge
+- [ ] **M6** restore + duplicate merge *(implemented, awaiting manual test)*
 - [ ] **M7** polish: reopen closed group, etc.
 
 ## Verified Chrome behaviours

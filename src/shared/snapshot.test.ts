@@ -117,6 +117,12 @@ describe('pushSnapshot', () => {
     expect(list.map((s) => s.id)).toEqual(['d', 'c', 'b']);
   });
 
+  it('never evicts the pinned snapshot', () => {
+    let list: Snapshot[] = [snap('prev-session', 30)];
+    for (const id of ['a', 'b', 'c', 'd']) list = pushSnapshot(list, snap(id, 30), 3, 'prev-session');
+    expect(list.map((s) => s.id)).toEqual(['d', 'c', 'prev-session']);
+  });
+
   it('never evicts the latest good snapshot', () => {
     let list: Snapshot[] = [snap('good', 30)];
     for (const id of ['s1', 's2', 's3']) list = pushSnapshot(list, snap(id, 1, { suspicious: true }), 3);

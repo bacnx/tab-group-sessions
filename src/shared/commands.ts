@@ -3,7 +3,7 @@
 //
 // Chrome lists commands on chrome://extensions/shortcuts sorted by *name*, not manifest order,
 // so names carry a numeric prefix that groups them:
-//   1x picker · 2x groups · 3x tabs in group · 4x goto tab N · 9x debug
+//   1x picker · 2x groups · 3x tabs in group · 4x goto tab N · 5x recovery · 9x debug
 // Descriptions start with the same category word. Renaming a command drops the user's binding
 // for it, so keep these stable once assigned.
 
@@ -21,6 +21,8 @@ export const CMD = {
   setGroupColor: '27-set-group-color',
   moveGroupLeft: '28-move-group-left',
   moveGroupRight: '29-move-group-right',
+  restoreSnapshot: '50-restore-snapshot',
+  mergeDuplicateGroups: '51-merge-duplicate-groups',
   nextTabInGroup: '30-next-tab-in-group',
   prevTabInGroup: '31-prev-tab-in-group',
   openDiagnostics: '90-open-diagnostics',

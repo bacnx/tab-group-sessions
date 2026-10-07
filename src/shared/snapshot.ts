@@ -5,6 +5,9 @@ import { NO_GROUP, groupOrder, isNewTabPageUrl } from './model';
 
 /** storage.local key: Snapshot[] newest first. */
 export const SNAPSHOTS_KEY = 'snapshots';
+/** storage.local key: id of the previous session's last good snapshot, pinned at boot so the
+ * ring buffer can't evict it while the user works in a (possibly partially restored) session. */
+export const PINNED_SNAPSHOT_KEY = 'pinnedSnapshotId';
 
 export interface SnapTab {
   url: string;
@@ -136,15 +139,20 @@ export function latestGood(list: readonly Snapshot[]): Snapshot | undefined {
 }
 
 /**
- * Adds `snap` (newest first) unless it equals the latest one, keeping at most `max` entries —
- * but never evicting the most recent good snapshot, so a run of suspicious ones can't wipe it.
+ * Adds `snap` (newest first) unless it equals the latest one, keeping at most `max` entries
+ * plus protected ones: the most recent good snapshot (so a run of suspicious ones can't wipe
+ * it) and the pinned one (previous session) are never evicted.
  */
-export function pushSnapshot(list: readonly Snapshot[], snap: Snapshot, max: number): Snapshot[] {
+export function pushSnapshot(list: readonly Snapshot[], snap: Snapshot, max: number, pinnedId?: string): Snapshot[] {
   if (list[0]?.hash === snap.hash) return [...list];
   const next = [snap, ...list];
   if (next.length <= max) return next;
-  const kept = next.slice(0, max);
   const good = latestGood(next);
-  if (good && !kept.includes(good)) kept[kept.length - 1] = good;
-  return kept;
+  const isProtected = (s: Snapshot) => s === good || (pinnedId !== undefined && s.id === pinnedId);
+  const keep = new Set(next.filter(isProtected));
+  for (const s of next) {
+    if (keep.size >= max) break;
+    keep.add(s);
+  }
+  return next.filter((s) => keep.has(s));
 }

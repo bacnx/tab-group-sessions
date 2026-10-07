@@ -14,7 +14,8 @@ export type Message =
   | { type: 'new-group'; windowId: number; title: string }
   | { type: 'rename-group'; groupId: number; title: string }
   | { type: 'close-group'; groupId: number }
-  | { type: 'set-group-color'; groupId: number; color: GroupColor };
+  | { type: 'set-group-color'; groupId: number; color: GroupColor }
+  | { type: 'restore-snapshot'; snapshotId: string };
 
 /** Reply to mutating picker messages. */
 export interface ActionResult {
@@ -29,7 +30,7 @@ export async function send<T = unknown>(msg: Message): Promise<T> {
 /** storage.session key: tells the picker how/why it was opened (set right before openPopup). */
 export const PENDING_OPEN_KEY = 'pendingOpen';
 
-export type PickerMode = 'leader' | 'search' | 'move' | 'new-group' | 'rename' | 'close' | 'color';
+export type PickerMode = 'leader' | 'search' | 'move' | 'new-group' | 'rename' | 'close' | 'color' | 'snapshots';
 
 export interface PendingOpen {
   src: 'api' | 'window';

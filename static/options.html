@@ -32,6 +32,13 @@
         <span>Seconds of quiet before writing a snapshot</span>
         <input id="snapshotDelaySec" type="number" min="1" max="60" step="1" />
       </label>
+      <label class="setting">
+        <input id="discardOnRestore" type="checkbox" />
+        <span>
+          <strong>Don't load restored tabs right away</strong>
+          <small>Restored tabs are discarded and load when you open them.</small>
+        </span>
+      </label>
     </section>
 
     <section>

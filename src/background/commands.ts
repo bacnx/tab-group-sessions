@@ -8,6 +8,7 @@ import { isNormalWindow } from './focus';
 import { openPicker, openPickerWindow } from './launcher';
 import { moveCurrentGroup } from './manage';
 import { enqueue } from './queue';
+import { mergeDuplicateGroups } from './restore';
 
 async function targetWindowId(hint: number | undefined): Promise<number | undefined> {
   if (hint !== undefined && (await isNormalWindow(hint))) return hint;
@@ -24,6 +25,7 @@ const PICKER_COMMANDS: Record<string, PickerMode> = {
   [CMD.renameGroup]: 'rename',
   [CMD.closeGroup]: 'close',
   [CMD.setGroupColor]: 'color',
+  [CMD.restoreSnapshot]: 'snapshots',
 };
 
 export function runCommand(command: string, windowHint?: number): void {
@@ -60,6 +62,8 @@ export function runCommand(command: string, windowHint?: number): void {
         return moveCurrentGroup(windowId, -1);
       case CMD.moveGroupRight:
         return moveCurrentGroup(windowId, 1);
+      case CMD.mergeDuplicateGroups:
+        return void (await mergeDuplicateGroups(windowId));
     }
     const n = parseGotoTab(command);
     if (n !== undefined) return gotoTabInGroup(windowId, n);

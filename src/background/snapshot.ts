@@ -5,7 +5,7 @@
 // - closing a window first ungroups its tabs, then removes them with isWindowClosing — any
 //   pending snapshot is cancelled and writes are suppressed for a moment;
 // - with no normal window left (Chrome keeps running in the background) nothing is written;
-// - right after a fresh start, while Chrome is still restoring the previous session.
+// - while booting (Chrome still restoring the previous session; see restore.ts).
 
 import { log } from '../shared/log';
 import {
@@ -14,18 +14,17 @@ import {
   hashWindows,
   isSuspicious,
   pushSnapshot,
+  PINNED_SNAPSHOT_KEY,
   SNAPSHOTS_KEY,
   type LiveWindow,
   type Snapshot,
 } from '../shared/snapshot';
 import { DEFAULT_SETTINGS, getSettings, type Settings } from '../shared/settings';
 import { enqueue } from './queue';
-import { ensureBoot } from './state';
+import { isReady } from './state';
 
 const DIRTY_KEY = 'snapshotDirty';
 export const SNAPSHOT_ALARM = 'snapshot';
-/** Until M6's settle detection: no snapshots this long after a fresh start. */
-const BOOT_GRACE_MS = 20_000;
 const CLOSING_SUPPRESS_MS = 2_000;
 
 let settings: Settings = DEFAULT_SETTINGS;
@@ -53,8 +52,7 @@ export function windowClosing(): void {
 
 export async function captureIfDirty(): Promise<void> {
   if (Date.now() < suppressUntil) return;
-  const boot = await ensureBoot();
-  if (Date.now() - boot.at < BOOT_GRACE_MS) return;
+  if (!(await isReady())) return;
   const dirty = (await chrome.storage.session.get(DIRTY_KEY))[DIRTY_KEY] === true;
   if (!dirty) return;
   await capture();
@@ -99,7 +97,8 @@ export async function capture(): Promise<Snapshot | undefined> {
     suspicious: isSuspicious(list[0], tabCount),
     windows,
   };
-  const next = pushSnapshot(list, snap, settings.snapshotCount);
+  const pinned = (await chrome.storage.local.get(PINNED_SNAPSHOT_KEY))[PINNED_SNAPSHOT_KEY] as string | undefined;
+  const next = pushSnapshot(list, snap, settings.snapshotCount, pinned);
   if (next[0] !== snap) return undefined; // identical to the latest
   await chrome.storage.local.set({ [SNAPSHOTS_KEY]: next });
   log('snapshot.saved', { tabs: tabCount, windows: windows.length, suspicious: snap.suspicious, kept: next.length });

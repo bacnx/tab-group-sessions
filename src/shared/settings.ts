@@ -7,9 +7,11 @@ export interface Settings {
   snapshotCount: number;
   /** Quiet time after the last tab/group change before a snapshot is written. */
   snapshotDelaySec: number;
+  /** Restored tabs are discarded right away so they don't all load at once. */
+  discardOnRestore: boolean;
 }
 
-export const DEFAULT_SETTINGS: Settings = { leaderEnabled: true, snapshotCount: 10, snapshotDelaySec: 3 };
+export const DEFAULT_SETTINGS: Settings = { leaderEnabled: true, snapshotCount: 10, snapshotDelaySec: 3, discardOnRestore: true };
 
 const KEY = 'settings';
 

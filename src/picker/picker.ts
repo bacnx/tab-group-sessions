@@ -6,7 +6,10 @@ import { CMD, gotoTabCommand } from '../shared/commands';
 import { matchFields, tokenize } from '../shared/fuzzy';
 import { GROUP_COLORS, NO_GROUP, groupOrder, isTitleTaken, normalizeTitle, type GroupColor } from '../shared/model';
 import { PENDING_OPEN_KEY, send, type ActionResult, type PendingOpen, type PickerMode } from '../shared/messages';
+import { readLiveState } from '../shared/live';
+import { planIsEmpty, reconcile } from '../shared/reconcile';
 import { search, type PickerData, type PickerGroup, type PickerTab, type Row } from '../shared/search';
+import { PINNED_SNAPSHOT_KEY, SNAPSHOTS_KEY, type Snapshot } from '../shared/snapshot';
 import { getSettings } from '../shared/settings';
 import { el, showConfirm, showList, showMenu, showMessage, showPrompt, type Outcome } from './views';
 
@@ -118,6 +121,13 @@ function showLeader(windowId: number): void {
             run: (key) => runCommand(windowId, gotoTabCommand(Number(key))),
           },
           { keys: ['m'], text: 'Move tab to group', run: go('move') },
+        ],
+      },
+      {
+        title: 'Recovery',
+        entries: [
+          { keys: ['u'], text: 'Restore from a snapshot', run: go('snapshots') },
+          { keys: ['M'], text: 'Merge same-named groups', run: cmd(CMD.mergeDuplicateGroups) },
         ],
       },
       {
@@ -391,6 +401,61 @@ function showColor(windowId: number): Promise<void> {
   );
 }
 
+// --- snapshots -----------------------------------------------------------------------------
+
+function timeAgo(ts: number): string {
+  const s = Math.round((Date.now() - ts) / 1000);
+  if (s < 60) return `${s}s ago`;
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m} min ago`;
+  const h = Math.round(m / 60);
+  if (h < 48) return `${h} h ago`;
+  return `${Math.round(h / 24)} days ago`;
+}
+
+async function showSnapshots(): Promise<void> {
+  const stored = await chrome.storage.local.get([SNAPSHOTS_KEY, PINNED_SNAPSHOT_KEY]);
+  const pinnedId = stored[PINNED_SNAPSHOT_KEY] as string | undefined;
+  const all = (stored[SNAPSHOTS_KEY] as Snapshot[] | undefined) ?? [];
+  if (all.length === 0) return showMessage(app, 'No snapshots yet.', closePicker);
+  // The previous session's snapshot first: it is what a partial restore is missing.
+  const snapshots = [...all.filter((s) => s.id === pinnedId), ...all.filter((s) => s.id !== pinnedId)];
+  const live = await readLiveState();
+  const items = snapshots.map((snap) => ({ snap, plan: reconcile(snap.windows, live) }));
+
+  showList(
+    app,
+    {
+      title: 'Restore from a snapshot — only missing tabs and groups are added',
+      placeholder: 'Filter by group name',
+      hint: '↑↓ select · Enter restore · Esc cancel',
+      filter: (q) => {
+        const tokens = tokenize(q);
+        if (!tokens.length) return items;
+        return items.filter(({ snap }) => {
+          const names = snap.windows.flatMap((w) => w.groups.map((g) => g.title)).join(' ');
+          return matchFields(tokens, [{ text: names, weight: 1 }]) !== null;
+        });
+      },
+      render: ({ snap, plan }, li) => {
+        const groups = snap.windows.reduce((n, w) => n + w.groups.length, 0);
+        const when = new Date(snap.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const summary = `${snap.tabCount} tabs · ${groups} groups${snap.windows.length > 1 ? ` · ${snap.windows.length} windows` : ''}`;
+        const effect = planIsEmpty(plan)
+          ? 'nothing missing'
+          : `adds ${plan.tabCount} tab${plan.tabCount === 1 ? '' : 's'}${plan.groupCount ? `, ${plan.groupCount} group${plan.groupCount === 1 ? '' : 's'}` : ''}`;
+        li.append(
+          el('span', 'title', `${when} · ${timeAgo(snap.ts)}${snap.id === pinnedId ? ' · last session' : ''}`),
+          el('span', 'meta', summary + (snap.suspicious ? ' · suspicious' : '')),
+          el('span', 'url', effect),
+        );
+      },
+      onSelect: ({ snap }) => act({ type: 'restore-snapshot', snapshotId: snap.id }),
+    },
+    closePicker,
+  );
+}
+
 // --- entry ---------------------------------------------------------------------------------
 
 async function start(mode: PickerMode, windowId: number): Promise<void> {
@@ -409,6 +474,8 @@ async function start(mode: PickerMode, windowId: number): Promise<void> {
       return showClose(windowId);
     case 'color':
       return showColor(windowId);
+    case 'snapshots':
+      return showSnapshots();
   }
 }
 

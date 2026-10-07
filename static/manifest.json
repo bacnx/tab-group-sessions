@@ -104,6 +104,12 @@
     "49-goto-tab-9": {
       "description": "Tab · Go to the last tab of the current group"
     },
+    "50-restore-snapshot": {
+      "description": "Recovery · Restore from a snapshot (only adds what is missing)"
+    },
+    "51-merge-duplicate-groups": {
+      "description": "Recovery · Merge groups with the same name in this window"
+    },
     "90-open-diagnostics": {
       "suggested_key": {
         "default": "Alt+Shift+D"

@@ -45,3 +45,22 @@ export function ensureBoot(): Promise<Boot> {
   })();
   return bootPromise;
 }
+
+// --- boot phase -----------------------------------------------------------------------------
+
+const PHASE_KEY = 'phase';
+
+/** 'booting' until Chrome's own session restore has settled and restore.ts has reconciled. */
+export type Phase = 'booting' | 'ready';
+
+export async function getPhase(): Promise<Phase | undefined> {
+  return (await chrome.storage.session.get(PHASE_KEY))[PHASE_KEY] as Phase | undefined;
+}
+
+export async function setPhase(phase: Phase): Promise<void> {
+  await chrome.storage.session.set({ [PHASE_KEY]: phase });
+}
+
+export async function isReady(): Promise<boolean> {
+  return (await getPhase()) === 'ready';
+}
