@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tab Group Sessions — Options</title>
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <main>
+    <h1>Tab Group Sessions</h1>
+    <p class="hint">Tab / Shift+Tab to move · Space to toggle · Enter to activate</p>
+
+    <section>
+      <label class="setting">
+        <input id="leaderEnabled" type="checkbox" autofocus />
+        <span>
+          <strong>Leader menu</strong>
+          <small>The toolbar shortcut (<code>_execute_action</code>) opens a tmux-style key menu.
+          Off: it opens the search picker directly.</small>
+        </span>
+      </label>
+    </section>
+
+    <section>
+      <button id="shortcuts" type="button">Edit keyboard shortcuts…</button>
+    </section>
+
+    <p id="status" role="status"></p>
+  </main>
+  <script type="module" src="options.js"></script>
+</body>
+</html>

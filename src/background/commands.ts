@@ -1,25 +1,41 @@
-// chrome.commands → actions. Commands act on the last-focused normal window.
+// Keyboard commands (and the same actions run from the leader menu) → actions.
+// Commands act on the last-focused normal window.
 
 import { CMD, parseGotoTab } from '../shared/commands';
+import type { PickerMode } from '../shared/messages';
 import { cycleGroup, cycleTabInGroup, gotoTabInGroup, lastGroup } from './actions';
 import { isNormalWindow } from './focus';
 import { openPicker, openPickerWindow } from './launcher';
+import { moveCurrentGroup } from './manage';
 import { enqueue } from './queue';
 
-async function targetWindowId(tab: chrome.tabs.Tab | undefined): Promise<number | undefined> {
-  if (tab?.windowId !== undefined && (await isNormalWindow(tab.windowId))) return tab.windowId;
+async function targetWindowId(hint: number | undefined): Promise<number | undefined> {
+  if (hint !== undefined && (await isNormalWindow(hint))) return hint;
   const win = await chrome.windows.getLastFocused({ windowTypes: ['normal'] }).catch(() => undefined);
   return win?.id;
 }
 
-export function handleCommand(command: string, tab: chrome.tabs.Tab | undefined): void {
-  // UI launchers run outside the queue: openPopup must be called promptly.
+/** Commands that only open the picker in a given mode. */
+const PICKER_COMMANDS: Record<string, PickerMode> = {
+  [CMD.openPicker]: 'search',
+  [CMD.openLeader]: 'leader',
+  [CMD.moveTab]: 'move',
+  [CMD.newGroup]: 'new-group',
+  [CMD.renameGroup]: 'rename',
+  [CMD.closeGroup]: 'close',
+  [CMD.setGroupColor]: 'color',
+};
+
+export function runCommand(command: string, windowHint?: number): void {
+  // UI launchers run outside the queue: the picker should appear immediately.
+  const mode = PICKER_COMMANDS[command];
+  if (mode) {
+    void openPicker(windowHint, mode);
+    return;
+  }
   switch (command) {
-    case CMD.openPicker:
-      void openPicker(tab?.windowId);
-      return;
     case CMD.openPickerWindow:
-      void openPickerWindow(tab?.windowId);
+      void openPickerWindow(windowHint, 'search');
       return;
     case CMD.openDiagnostics:
       void chrome.tabs.create({ url: chrome.runtime.getURL('diagnostics.html') });
@@ -27,7 +43,7 @@ export function handleCommand(command: string, tab: chrome.tabs.Tab | undefined)
   }
 
   void enqueue(`command:${command}`, async () => {
-    const windowId = await targetWindowId(tab);
+    const windowId = await targetWindowId(windowHint);
     if (windowId === undefined) return;
     switch (command) {
       case CMD.nextGroup:
@@ -40,8 +56,16 @@ export function handleCommand(command: string, tab: chrome.tabs.Tab | undefined)
         return cycleTabInGroup(windowId, 1);
       case CMD.prevTabInGroup:
         return cycleTabInGroup(windowId, -1);
+      case CMD.moveGroupLeft:
+        return moveCurrentGroup(windowId, -1);
+      case CMD.moveGroupRight:
+        return moveCurrentGroup(windowId, 1);
     }
     const n = parseGotoTab(command);
     if (n !== undefined) return gotoTabInGroup(windowId, n);
   });
+}
+
+export function handleCommand(command: string, tab: chrome.tabs.Tab | undefined): void {
+  runCommand(command, tab?.windowId);
 }

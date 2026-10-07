@@ -100,3 +100,55 @@ export function nthItem<T>(items: readonly T[], n: number): T | undefined {
   if (n >= 9) return items[items.length - 1];
   return items[n - 1];
 }
+
+export const GROUP_COLORS = ['grey', 'blue', 'red', 'yellow', 'green', 'pink', 'purple', 'cyan', 'orange'] as const;
+export type GroupColor = (typeof GROUP_COLORS)[number];
+
+export function normalizeTitle(title: string): string {
+  return title.trim().replace(/\s+/g, ' ');
+}
+
+/** Group titles are unique per window, compared case-insensitively. */
+export function isTitleTaken(groups: readonly { id: number; title?: string }[], title: string, exceptId?: number): boolean {
+  const wanted = normalizeTitle(title).toLowerCase();
+  return groups.some((g) => g.id !== exceptId && normalizeTitle(g.title ?? '').toLowerCase() === wanted);
+}
+
+/** Validates a title for create/rename; returns an error message or undefined. */
+export function titleError(
+  groups: readonly { id: number; title?: string }[],
+  title: string,
+  exceptId?: number,
+): string | undefined {
+  if (normalizeTitle(title) === '') return 'Name cannot be empty';
+  if (isTitleTaken(groups, title, exceptId)) return `A group named “${normalizeTitle(title)}” already exists in this window`;
+  return undefined;
+}
+
+/**
+ * Target index for chrome.tabGroups.move to swap a group with its neighbour (-1 left, 1 right).
+ * Undefined when there is no neighbour, or when moving right would pass `pinnedLastId` (Inbox).
+ */
+export function moveGroupIndex(
+  tabs: readonly TabLike[],
+  groupId: number,
+  dir: 1 | -1,
+  pinnedLastId?: number,
+): number | undefined {
+  const spans: { id: number; first: number; last: number; count: number }[] = [];
+  for (const t of [...tabs].sort((a, b) => a.index - b.index)) {
+    if (t.groupId === NO_GROUP) continue;
+    const span = spans[spans.length - 1];
+    if (span && span.id === t.groupId) {
+      span.last = t.index;
+      span.count++;
+    } else spans.push({ id: t.groupId, first: t.index, last: t.index, count: 1 });
+  }
+  const i = spans.findIndex((s) => s.id === groupId);
+  const self = spans[i];
+  if (!self || groupId === pinnedLastId) return undefined;
+  if (dir === -1) return spans[i - 1]?.first;
+  const next = spans[i + 1];
+  if (!next || next.id === pinnedLastId) return undefined;
+  return next.last - self.count + 1;
+}

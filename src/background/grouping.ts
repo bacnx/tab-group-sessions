@@ -81,7 +81,7 @@ function isTransientHelper(tab: chrome.tabs.Tab): boolean {
 }
 
 /** chrome.tabs.group with a plain array; returns the group id. */
-async function groupTabs(tabIds: number[], target: { groupId: number } | { windowId: number }): Promise<number> {
+export async function groupTabs(tabIds: number[], target: { groupId: number } | { windowId: number }): Promise<number> {
   const [first, ...rest] = tabIds;
   if (first === undefined) throw new Error('groupTabs: no tabs');
   const options: chrome.tabs.GroupOptions =
@@ -91,7 +91,7 @@ async function groupTabs(tabIds: number[], target: { groupId: number } | { windo
   return (await chrome.tabs.group(options)) as unknown as number;
 }
 
-function findInbox(groups: chrome.tabGroups.TabGroup[]): chrome.tabGroups.TabGroup | undefined {
+export function findInbox(groups: chrome.tabGroups.TabGroup[]): chrome.tabGroups.TabGroup | undefined {
   return groups.find((g) => g.title === INBOX_TITLE);
 }
 

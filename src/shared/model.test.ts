@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NO_GROUP, cycle, decidePlacement, groupOrder, mruFromTabs, nthItem, pickTabToActivate, touchMru, type TabLike } from './model';
+import { NO_GROUP, cycle, decidePlacement, groupOrder, isTitleTaken, moveGroupIndex, mruFromTabs, nthItem, titleError, pickTabToActivate, touchMru, type TabLike } from './model';
 
 const tab = (index: number, groupId: number, extra: Partial<TabLike> = {}): TabLike => ({
   id: index + 100,
@@ -116,5 +116,54 @@ describe('nthItem', () => {
     expect(nthItem(['a', 'b', 'c'], 4)).toBeUndefined();
     expect(nthItem(['a', 'b', 'c'], 9)).toBe('c');
     expect(nthItem([], 9)).toBeUndefined();
+  });
+});
+
+describe('titles', () => {
+  const groups = [
+    { id: 1, title: 'API' },
+    { id: 2, title: ' research  notes ' },
+  ];
+
+  it('detects duplicates case- and whitespace-insensitively', () => {
+    expect(isTitleTaken(groups, 'api')).toBe(true);
+    expect(isTitleTaken(groups, 'research notes')).toBe(true);
+    expect(isTitleTaken(groups, 'api', 1)).toBe(false);
+    expect(isTitleTaken(groups, 'labs')).toBe(false);
+  });
+
+  it('reports empty and duplicate names', () => {
+    expect(titleError(groups, '   ')).toMatch(/empty/);
+    expect(titleError(groups, 'Api')).toMatch(/already exists/);
+    expect(titleError(groups, 'labs')).toBeUndefined();
+  });
+});
+
+describe('moveGroupIndex', () => {
+  // pinned(0) | A(1,2) | B(3) | C(4,5,6) | Inbox(7)
+  const tabs = [
+    tab(0, NO_GROUP, { pinned: true }),
+    tab(1, 1),
+    tab(2, 1),
+    tab(3, 2),
+    tab(4, 3),
+    tab(5, 3),
+    tab(6, 3),
+    tab(7, 9),
+  ];
+
+  it('moves left onto the previous group start', () => {
+    expect(moveGroupIndex(tabs, 2, -1, 9)).toBe(1);
+    expect(moveGroupIndex(tabs, 1, -1, 9)).toBeUndefined();
+  });
+
+  it('moves right past the next group', () => {
+    expect(moveGroupIndex(tabs, 1, 1, 9)).toBe(2); // A after B: B(1) A(2,3)
+    expect(moveGroupIndex(tabs, 2, 1, 9)).toBe(6); // B after C: C(3,4,5) B(6)
+  });
+
+  it('never moves past or moves the pinned-last group', () => {
+    expect(moveGroupIndex(tabs, 3, 1, 9)).toBeUndefined();
+    expect(moveGroupIndex(tabs, 9, -1, 9)).toBeUndefined();
   });
 });

@@ -69,8 +69,17 @@ Shortcuts: `chrome://extensions/shortcuts`. Suggested keys in the manifest only 
    Moving to another group is done through the picker or next/prev-group.
 7. **Group management by keyboard**: rename, close (always **with confirmation**, closes the
    tabs for good), new group, color, reorder, MRU toggle, reopen last closed group.
-   Group titles must be **unique per window** (enforced on create/rename; untitled or duplicate
-   groups found in the wild get auto-renamed).
+   Group titles must be **unique per window**, case-insensitive (enforced on keyboard
+   create/rename/move-to-new-group). Groups named with the mouse are **not** auto-renamed:
+   Chrome creates them untitled and the user types the name over several seconds, so a rename
+   would fight the user. Untitled/duplicate groups are dealt with by snapshot matching (M5/M6).
+   - Move tab: the tab stays active, so focus follows it into the target group. Pinned tabs
+     can't be moved (error shown).
+   - New group: a New Tab in a fresh group, focused.
+   - Close: focus moves to the MRU group first; if the window would become empty, a New Tab in
+     a fresh Inbox is created first. The closed group (title, colour, URLs) is kept in
+     `storage.session.lastClosedGroup` for reopen-closed-group (M7).
+   - Move group left/right swaps with the neighbour; Inbox never moves and nothing passes it.
 8. **Restore after restart** — hybrid strategy:
    - Chrome's "Continue where you left off" (enabled) restores tabs/groups first.
    - The extension snapshots *all normal windows* to `chrome.storage.local`.
@@ -166,18 +175,36 @@ category. Renaming a command drops its binding — keep names stable once assign
 | Prefix | Commands |
 |---|---|
 | — | `_execute_action` — toolbar popup (picker now; leader menu from M4) |
-| 1x Picker | `10-open-picker` (openPopup, window fallback in fullscreen), `11-open-picker-window` |
-| 2x Group | `20-next-group`, `21-prev-group`, `22-last-group`; M4 adds new/rename/close/color/reorder/move-tab |
+| 1x Picker | `10-open-picker` (search; openPopup, window fallback in fullscreen), `11-open-picker-window`, `12-open-leader` |
+| 2x Group | `20-next-group`, `21-prev-group`, `22-last-group`, `23-move-tab`, `24-new-group`, `25-rename-group`, `26-close-group`, `27-set-group-color`, `28-move-group-left`, `29-move-group-right` |
 | 3x Tab | `30-next-tab-in-group`, `31-prev-tab-in-group` |
 | 4x Goto | `41-goto-tab-1` … `49-goto-tab-9` (9 = last; planned binding Alt+1..9) |
 | 5x–8x | reserved: recovery (restore-snapshot, reopen-closed-group, merge-duplicate-groups) |
 | 9x Debug | `90-open-diagnostics` |
 
-### Leader mode (tmux-style, can be disabled in Options)
+### Leader mode (tmux-style, toggle in Options)
 
-Tentative map, finalised in M4: `s`/`Space` picker · `m` move tab · `n`/`p` next/prev tab in
-group · `1`–`9` goto tab · `(`/`)` prev/next group · `l` last group · `c` new group ·
-`,` rename · `x` close · `{`/`}` move group left/right · `u` restore snapshot.
+`_execute_action` (and `12-open-leader`) opens a key menu; one key runs an action or switches
+the picker into a mode. `Esc` closes. Disabled in Options → `_execute_action` opens search.
+
+| Section | Keys |
+|---|---|
+| Find | `s` / `Space` search |
+| Tab | `n` / `p` next/prev tab in group · `1`–`9` goto tab · `m` move tab to group |
+| Group | `)` / `(` next/prev group · `l` last group · `c` new · `,` rename · `k` colour · `{` / `}` move left/right · `x` close |
+| Other | `o` options |
+
+Reserved for M6/M7: `u` restore snapshot.
+
+### Picker modes
+
+`picker.html` is one page with modes (`PickerMode`): leader, search, move, new-group, rename,
+close, color. The mode comes from the URL (`?mode=`, popup-window fallback), else from
+`storage.session.pendingOpen` written by `launcher.openPicker` just before `openPopup()`
+(valid 3 s), else the leader/search default. Views live in `src/picker/views.ts` (list,
+prompt, confirm, key menu, message); every view puts focus in an input immediately. Key-only
+views use a hidden "key catcher" input. Validating actions (move, new, rename, close, colour)
+reply with an `ActionResult`; errors are shown inline and the picker stays open.
 
 ## Milestones
 
@@ -185,7 +212,7 @@ group · `1`–`9` goto tab · `(`/`)` prev/next group · `l` last group · `c` 
 - [x] **M1** focus engine: queue, state, onActivated → focusGroup, next/prev/last-group
 - [x] **M2** auto-grouping: new tabs → active/opener group, strays → Inbox (kept last)
 - [ ] **M3** unified picker: fuzzy search, popup + window fallback, in-group tab navigation *(implemented, awaiting manual test)*
-- [ ] **M4** group management + move tab + leader mode + options page
+- [ ] **M4** group management + move tab + leader mode + options page *(implemented, awaiting manual test)*
 - [ ] **M5** snapshots
 - [ ] **M6** restore + duplicate merge
 - [ ] **M7** polish: reopen closed group, etc.

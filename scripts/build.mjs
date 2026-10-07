@@ -28,6 +28,7 @@ const ctx = await esbuild.context({
     background: 'src/background/index.ts',
     picker: 'src/picker/picker.ts',
     diagnostics: 'src/diagnostics/diagnostics.ts',
+    options: 'src/options/options.ts',
   },
   bundle: true,
   format: 'esm',

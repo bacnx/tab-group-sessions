@@ -24,13 +24,16 @@
       "suggested_key": {
         "default": "Alt+S"
       },
-      "description": "Picker · Open (toolbar popup)"
+      "description": "Picker · Leader menu (or search, see Options)"
     },
     "10-open-picker": {
       "description": "Picker · Open (falls back to a window in fullscreen)"
     },
     "11-open-picker-window": {
       "description": "Picker · Open in a separate window"
+    },
+    "12-open-leader": {
+      "description": "Picker · Open the leader menu (works in fullscreen)"
     },
     "20-next-group": {
       "suggested_key": {
@@ -46,6 +49,27 @@
     },
     "22-last-group": {
       "description": "Group · Toggle to the last focused group"
+    },
+    "23-move-tab": {
+      "description": "Group · Move the current tab to another / a new group"
+    },
+    "24-new-group": {
+      "description": "Group · New group"
+    },
+    "25-rename-group": {
+      "description": "Group · Rename the current group"
+    },
+    "26-close-group": {
+      "description": "Group · Close the current group (asks first)"
+    },
+    "27-set-group-color": {
+      "description": "Group · Change the current group colour"
+    },
+    "28-move-group-left": {
+      "description": "Group · Move the current group left"
+    },
+    "29-move-group-right": {
+      "description": "Group · Move the current group right"
     },
     "30-next-tab-in-group": {
       "description": "Tab · Next tab in the current group (wraps)"
@@ -86,5 +110,9 @@
       },
       "description": "Debug · Open the diagnostics page"
     }
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
   }
 }

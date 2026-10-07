@@ -3,13 +3,14 @@
 
 import './diag';
 import { activateTab, focusGroupById, handleGroupRemoved } from './actions';
-import { handleCommand } from './commands';
+import { handleCommand, runCommand } from './commands';
 import { syncFocus } from './focus';
 import { recordFocusChange, recordNewTab, scheduleSweep, scheduleSweepAll } from './grouping';
 import { forgetPickerWindow } from './launcher';
 import { enqueue } from './queue';
-import type { Message } from '../shared/messages';
+import type { ActionResult, Message } from '../shared/messages';
 import { NO_GROUP } from '../shared/model';
+import { closeGroup, moveActiveTab, newGroup, renameGroup, setGroupColor } from './manage';
 import { clearWindowState } from './state';
 
 chrome.tabs.onActivated.addListener(({ windowId }) => {
@@ -55,7 +56,17 @@ chrome.windows.onRemoved.addListener((windowId) => {
 
 chrome.commands.onCommand.addListener(handleCommand);
 
-// Picker actions. Answer right away so the picker can close; the work continues in the queue.
+/** Runs a validating action in the queue and replies with its result. */
+function reply(label: string, action: () => Promise<ActionResult>, sendResponse: (r: ActionResult) => void): true {
+  let result: ActionResult = { ok: false, error: 'Chrome is busy, try again' };
+  void enqueue(label, async () => {
+    result = await action();
+  }).then(() => sendResponse(result));
+  return true;
+}
+
+// Picker actions. Fire-and-forget ones answer right away so the picker can close; the work
+// continues in the queue. Validating ones answer with an ActionResult.
 chrome.runtime.onMessage.addListener((msg: Message, _sender, sendResponse) => {
   switch (msg.type) {
     case 'focus-group':
@@ -64,6 +75,19 @@ chrome.runtime.onMessage.addListener((msg: Message, _sender, sendResponse) => {
     case 'activate-tab':
       void enqueue('picker.activate-tab', () => activateTab(msg.tabId));
       break;
+    case 'run-command':
+      runCommand(msg.command, msg.windowId);
+      break;
+    case 'move-tab':
+      return reply('picker.move-tab', () => moveActiveTab(msg.windowId, msg.groupId, msg.newTitle), sendResponse);
+    case 'new-group':
+      return reply('picker.new-group', () => newGroup(msg.windowId, msg.title), sendResponse);
+    case 'rename-group':
+      return reply('picker.rename-group', () => renameGroup(msg.groupId, msg.title), sendResponse);
+    case 'close-group':
+      return reply('picker.close-group', () => closeGroup(msg.groupId), sendResponse);
+    case 'set-group-color':
+      return reply('picker.set-group-color', () => setGroupColor(msg.groupId, msg.color), sendResponse);
     default:
       return false;
   }
