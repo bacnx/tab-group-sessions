@@ -78,6 +78,7 @@ chrome.tabGroups.onMoved.addListener((g) => log('tabGroups.onMoved', groupInfo(g
 
 chrome.windows.onCreated.addListener((w) => log('windows.onCreated', { id: w.id, type: w.type }));
 chrome.windows.onRemoved.addListener((id) => log('windows.onRemoved', { id }));
+chrome.windows.onFocusChanged.addListener((id) => log('windows.onFocusChanged', { id }));
 
 chrome.commands.onCommand.addListener((command, tab) => {
   log('commands.onCommand', { command, tabId: tab?.id, windowId: tab?.windowId });

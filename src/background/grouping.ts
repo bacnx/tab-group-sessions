@@ -17,13 +17,39 @@ const QUIET_MS = 300;
 const MAX_WAIT_MS = 3000;
 const NEW_TAB_TTL_MS = 10_000;
 
+interface NewTab {
+  openerTabId?: number;
+  at: number;
+  /** Created while Chrome had no focused window. Undefined until known (async lookup). */
+  external?: boolean;
+}
+
 /** Tabs seen in tabs.onCreated, until a sweep handles them. In memory only: the sweep runs
  * well within the service worker's lifetime, and losing this just means "treat as stray". */
-const newTabs = new Map<number, { openerTabId?: number; at: number }>();
+const newTabs = new Map<number, NewTab>();
+
+// Whether any Chrome window has focus. Kept in memory and mirrored to storage.session because
+// the service worker usually sleeps while the user is in another app.
+const FOCUS_KEY = 'chromeFocused';
+let chromeFocused: boolean | undefined;
+
+export function recordFocusChange(windowId: number): void {
+  chromeFocused = windowId !== chrome.windows.WINDOW_ID_NONE;
+  void chrome.storage.session.set({ [FOCUS_KEY]: chromeFocused });
+}
 
 export function recordNewTab(tab: chrome.tabs.Tab): void {
   if (tab.id === undefined) return;
-  newTabs.set(tab.id, { openerTabId: tab.openerTabId, at: Date.now() });
+  const entry: NewTab = { openerTabId: tab.openerTabId, at: Date.now() };
+  newTabs.set(tab.id, entry);
+  if (chromeFocused !== undefined) {
+    entry.external = !chromeFocused;
+  } else {
+    // Issued before any later focus event is handled, so it reads the pre-creation value.
+    void chrome.storage.session.get(FOCUS_KEY).then((r) => {
+      entry.external = r[FOCUS_KEY] === false;
+    });
+  }
 }
 
 const timers = new Map<number, { timer: ReturnType<typeof setTimeout>; firstAt: number }>();
@@ -83,6 +109,7 @@ async function sweepWindow(windowId: number): Promise<void> {
 
     const toGroup = new Map<number, number[]>();
     const toInbox: number[] = [];
+    const decisions: unknown[] = [];
     for (const t of strays) {
       const id = t.id!;
       const info = newTabs.get(id);
@@ -90,10 +117,11 @@ async function sweepWindow(windowId: number): Promise<void> {
       const opener = info?.openerTabId !== undefined ? tabs.find((o) => o.id === info.openerTabId) : undefined;
       const placement = decidePlacement({
         isNew: info !== undefined,
-        hasOpener: info?.openerTabId !== undefined,
+        external: info?.external === true,
         openerGroupId: opener?.groupId,
         activeGroupId,
       });
+      if (info) decisions.push({ id, external: info.external, opener: info.openerTabId, placement: placement.kind });
       if (placement.kind === 'inbox') toInbox.push(id);
       else toGroup.set(placement.groupId, [...(toGroup.get(placement.groupId) ?? []), id]);
     }
@@ -102,7 +130,7 @@ async function sweepWindow(windowId: number): Promise<void> {
       await groupTabs(tabIds, { groupId });
     }
     if (toInbox.length > 0) await addToInbox(windowId, groups, toInbox);
-    log('grouping.sweep', { windowId, toGroup: Object.fromEntries(toGroup), toInbox });
+    log('grouping.sweep', { windowId, toGroup: Object.fromEntries(toGroup), toInbox, decisions });
   }
 
   await keepInboxLast(windowId);

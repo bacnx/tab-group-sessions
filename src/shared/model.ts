@@ -67,8 +67,11 @@ export type Placement = { kind: 'group'; groupId: number } | { kind: 'inbox' };
 export interface PlacementInput {
   /** Created moments ago (seen in tabs.onCreated), as opposed to an existing stray tab. */
   isNew: boolean;
-  /** Tabs opened from inside Chrome (Ctrl+T, links) carry an opener; external-app tabs don't. */
-  hasOpener: boolean;
+  /**
+   * Created while no Chrome window had focus, i.e. by another app (a link clicked in Teams…).
+   * `openerTabId` can't tell this apart: Chrome sets it to the active tab for external links too.
+   */
+  external: boolean;
   /** Group of the opener tab at sweep time, if any. */
   openerGroupId?: number;
   /** Most recently focused group of the window that still exists. */
@@ -77,11 +80,12 @@ export interface PlacementInput {
 
 /**
  * Where an ungrouped, unpinned tab belongs:
- * - a new tab opened from inside Chrome → the opener's group, else the active group;
+ * - a new tab opened from inside Chrome (Ctrl+T, bookmark, link from an ungrouped tab…)
+ *   → the opener's group, else the active group;
  * - everything else (external app, dragged out, restored ungrouped, unpinned) → Inbox.
  */
 export function decidePlacement(input: PlacementInput): Placement {
-  if (input.isNew && input.hasOpener) {
+  if (input.isNew && !input.external) {
     if (input.openerGroupId !== undefined && input.openerGroupId !== NO_GROUP) {
       return { kind: 'group', groupId: input.openerGroupId };
     }

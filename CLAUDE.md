@@ -42,10 +42,12 @@ Shortcuts: `chrome://extensions/shortcuts`. Suggested keys in the manifest only 
 3. **New tabs** (Ctrl+T, links, …) go into the active group (or the opener's group), placed at
    the **end of the group**. Tabs that Chrome already put in a group are left alone.
    Tabs opened by external apps go to Inbox.
-   Implementation rule (`decidePlacement`): a *new* tab **with an opener** (Ctrl+T and links
-   carry `openerTabId`) → opener's group, else the active (MRU) group; a new tab **without an
-   opener** (external app, or created by the extension itself) → Inbox; any other stray
-   (dragged out, restored ungrouped, unpinned) → Inbox. Placement runs in a per-window sweep
+   Implementation rule (`decidePlacement`): a *new* tab created **while a Chrome window had
+   focus** (Ctrl+T, bookmark, link from an ungrouped tab, extension-created) → opener's group,
+   else the active (MRU) group; a new tab created **while Chrome had no focus** (link clicked in
+   another app) → Inbox; any other stray (dragged out, restored ungrouped, unpinned) → Inbox.
+   Focus is tracked via `windows.onFocusChanged` (memory + `storage.session`).
+   `openerTabId` is useless for this: Chrome sets it to the active tab for external links too. Placement runs in a per-window sweep
    debounced to 300 ms of quiet (max 3 s), never directly from a single event.
 4. **Unified picker** (one fuzzy search over groups *and* tabs, all windows):
    - Query is split on spaces; every token must fuzzy-match (AND, fzf-style).
@@ -230,6 +232,8 @@ here is still an assumption.
   the action popup.
 - `storage.session` is wiped on extension reload/update (fresh `bootId`), so per-window MRU is
   seeded from `tab.lastAccessed` whenever it is empty.
+- **Links opened from another app (Teams) get `openerTabId` = the active tab**, exactly like
+  Ctrl+T, are created ungrouped at the end of the strip and activated.
 - Chrome split view creates helper tabs `chrome://tab-search.top-chrome/split_new_tab_page.html`
   that appear (inside the group) and disappear quickly — stray-tab logic must tolerate them.
 

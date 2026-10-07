@@ -5,7 +5,7 @@ import './diag';
 import { handleGroupRemoved } from './actions';
 import { handleCommand } from './commands';
 import { syncFocus } from './focus';
-import { recordNewTab, scheduleSweep, scheduleSweepAll } from './grouping';
+import { recordFocusChange, recordNewTab, scheduleSweep, scheduleSweepAll } from './grouping';
 import { forgetPickerWindow } from './launcher';
 import { enqueue } from './queue';
 import { NO_GROUP } from '../shared/model';
@@ -38,6 +38,8 @@ chrome.tabGroups.onMoved.addListener((group) => scheduleSweep(group.windowId));
 chrome.tabGroups.onRemoved.addListener((group) => {
   void enqueue('tabGroups.onRemoved', () => handleGroupRemoved(group));
 });
+
+chrome.windows.onFocusChanged.addListener(recordFocusChange);
 
 chrome.windows.onCreated.addListener((win) => {
   if (win.id !== undefined) scheduleSweep(win.id);
