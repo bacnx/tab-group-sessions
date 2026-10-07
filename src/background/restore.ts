@@ -7,7 +7,7 @@
 // Idempotence comes from reconcile(): a state that already holds everything plans nothing.
 
 import { log } from '../shared/log';
-import { NO_GROUP, normalizeTitle, type GroupColor } from '../shared/model';
+import { NO_GROUP, isNewTabPageUrl, normalizeTitle, type GroupColor } from '../shared/model';
 import { isNearEmpty, readLiveState } from '../shared/live';
 import type { ActionResult } from '../shared/messages';
 import { planIsEmpty, reconcile, type RestorePlan, type WindowPlan } from '../shared/reconcile';
@@ -125,7 +125,7 @@ async function reconcileNow(opts: { auto: boolean; trigger: string }): Promise<R
     groupCount: plan.groupCount,
   };
   if (!planIsEmpty(plan) && opts.auto && nearEmpty) {
-    await executePlan(plan);
+    await executePlan(plan, { clearNewTabs: true });
     outcome.restored = true;
     await setPendingBadge(undefined);
   } else if (opts.trigger === 'boot') {
@@ -173,7 +173,28 @@ async function createTabs(windowId: number, urls: string[]): Promise<number[]> {
   return ids;
 }
 
-async function executeWindow(wp: WindowPlan, discard: boolean): Promise<void> {
+const COMMIT_TIMEOUT_MS = 5_000;
+
+/**
+ * Discarding a tab before its URL is committed replaces it with a tab that has NO URL (seen in
+ * the M6 test: 9 of 15 restored tabs came back blank). Wait until the navigation has committed
+ * (`url` set, no `pendingUrl`), then discard.
+ */
+async function discardWhenCommitted(tabId: number): Promise<void> {
+  const deadline = Date.now() + COMMIT_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    const tab = await chrome.tabs.get(tabId).catch(() => undefined);
+    if (!tab) return;
+    if (tab.url && !tab.pendingUrl) {
+      if (!tab.active) await chrome.tabs.discard(tabId).catch(() => undefined);
+      return;
+    }
+    await sleep(100);
+  }
+  // Not committed in time: leave it loading rather than risk losing the URL.
+}
+
+async function executeWindow(wp: WindowPlan, discard: boolean, clearNewTabs: boolean): Promise<void> {
   let placeholder: number | undefined;
   if (wp.windowId === undefined) {
     const win = await chrome.windows.create({ focused: false });
@@ -205,15 +226,21 @@ async function executeWindow(wp: WindowPlan, discard: boolean): Promise<void> {
     created.push(...ids);
   }
   if (placeholder !== undefined && created.length > 0) await chrome.tabs.remove(placeholder).catch(() => undefined);
-  if (discard) {
-    for (const id of created) await chrome.tabs.discard(id).catch(() => undefined);
+  if (clearNewTabs && created.length > 0) {
+    // Auto-restore into a near-empty window: the New Tab Chrome opened at startup is noise.
+    const leftovers = (await chrome.tabs.query({ windowId })).filter(
+      (t) => t.id !== undefined && !created.includes(t.id) && isNewTabPageUrl(t.pendingUrl || t.url),
+    );
+    if (leftovers.length) await chrome.tabs.remove(leftovers.map((t) => t.id!)).catch(() => undefined);
   }
+  if (discard) await Promise.all(created.map(discardWhenCommitted));
 }
 
-async function executePlan(plan: RestorePlan): Promise<void> {
+async function executePlan(plan: RestorePlan, opts: { clearNewTabs?: boolean } = {}): Promise<void> {
   const { discardOnRestore } = await getSettings();
   for (const wp of plan.windows) {
-    if (wp.createGroups.length || wp.addToGroups.length || wp.pinned.length) await executeWindow(wp, discardOnRestore);
+    if (wp.createGroups.length || wp.addToGroups.length || wp.pinned.length)
+      await executeWindow(wp, discardOnRestore, opts.clearNewTabs ?? false);
   }
 }
 

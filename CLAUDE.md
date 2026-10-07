@@ -181,7 +181,9 @@ scripts/build.mjs      esbuild build / watch
   gets the same near-empty auto-restore.
 - Execution: tabs created inactive, grouped in the same queued task (the stray sweep never
   sees them), groups get title/colour and start collapsed; a new window's placeholder New Tab
-  is removed; tabs are discarded if `discardOnRestore` (default on). Unopenable URLs skipped.
+  is removed, and on auto-restore the startup New Tab of the near-empty window too. Tabs are
+  discarded if `discardOnRestore` (default on) — **only after their URL has committed**.
+  Unopenable URLs skipped.
 - Manual restore: picker mode `snapshots` (leader `u`, `50-restore-snapshot`) lists snapshots
   with a preview ("adds N tabs, M groups" / "nothing missing"); Enter merges.
 - Duplicate merge: only when ≥ 2 groups are created within 1 s in a window (a bulk restore,
@@ -318,6 +320,11 @@ here is still an assumption.
   lazily loading the restored tabs), so focus/collapse must be re-applied *after* settling.
 - Snapshots verified across a real restart: the last pre-exit snapshot survived, no empty or
   suspicious snapshot was written at shutdown.
+- **`chrome.tabs.discard()` on a just-created tab (URL not yet committed, `pendingUrl` set)
+  replaces it with a new tab id that has NO URL** — 9 of 15 auto-restored tabs came back
+  blank. Discard only once `tab.url` is set and `pendingUrl` is gone.
+- Auto-restore verified with "Open the New Tab page" at startup: reconcile ran ~3.2 s after
+  `onStartup`, near-empty → 15 tabs / 4 groups restored, focus applied.
 - Chrome split view creates helper tabs `chrome://tab-search.top-chrome/split_new_tab_page.html`
   that appear (inside the group) and disappear quickly — stray-tab logic must tolerate them.
 
