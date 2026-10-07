@@ -79,8 +79,12 @@ Shortcuts: `chrome://extensions/shortcuts`. Suggested keys in the manifest only 
      can't be moved (error shown).
    - New group: a New Tab in a fresh group, focused.
    - Close: focus moves to the MRU group first; if the window would become empty, a New Tab in
-     a fresh Inbox is created first. The closed group (title, colour, URLs) is kept in
-     `storage.session.lastClosedGroup` for reopen-closed-group (M7).
+     a fresh Inbox is created first. The closed group (window, title, colour, URLs) is pushed
+     onto `storage.session.closedGroups` (most recent first, max 10).
+   - Reopen closed group (`52`, leader `r`): pops the stack, recreates the group in its original
+     window (else the current one) with title/colour, focuses it on its first tab. If that
+     window already has a group with the same title, only the missing URLs are added to it.
+     Groups closed with the mouse aren't tracked — Chrome's Ctrl+Shift+T covers those.
    - Move group left/right swaps with the neighbour; Inbox never moves and nothing passes it.
 8. **Restore after restart** — hybrid strategy:
    - Chrome's "Continue where you left off" (enabled) restores tabs/groups first.
@@ -128,7 +132,7 @@ scripts/build.mjs      esbuild build / watch
 
 | Data | Where | Notes |
 |---|---|---|
-| Per-window MRU of groups, `bootId`, boot phase, restore lock, last closed group, pending picker mode | `storage.session` | Cleared on browser restart → a missing `bootId` means "fresh boot" |
+| Per-window MRU of groups, `bootId`, boot phase, restore lock, closed-group stack, pending picker mode | `storage.session` | Cleared on browser restart → a missing `bootId` means "fresh boot" |
 | Settings, snapshots (ring buffer, default 10) | `storage.local` | Durable |
 | Active tab, groups, collapsed state, order | **not stored** — always re-read from Chrome | Last used tab of a group = max `tab.lastAccessed` |
 
@@ -215,7 +219,7 @@ category. Renaming a command drops its binding — keep names stable once assign
 | 2x Group | `20-next-group`, `21-prev-group`, `22-last-group`, `23-move-tab`, `24-new-group`, `25-rename-group`, `26-close-group`, `27-set-group-color`, `28-move-group-left`, `29-move-group-right` |
 | 3x Tab | `30-next-tab-in-group`, `31-prev-tab-in-group` |
 | 4x Goto | `41-goto-tab-1` … `49-goto-tab-9` (9 = last; planned binding Alt+1..9) |
-| 5x Recovery | `50-restore-snapshot`, `51-merge-duplicate-groups`; reserved `52-reopen-closed-group` (M7) |
+| 5x Recovery | `50-restore-snapshot`, `51-merge-duplicate-groups`, `52-reopen-closed-group` |
 | 6x–8x | reserved |
 | 9x Debug | `90-open-diagnostics` |
 
@@ -229,7 +233,7 @@ the picker into a mode. `Esc` closes. Disabled in Options → `_execute_action` 
 | Find | `s` / `Space` search |
 | Tab | `n` / `p` next/prev tab in group · `1`–`9` goto tab · `m` move tab to group |
 | Group | `)` / `(` next/prev group · `l` last group · `c` new · `,` rename · `k` colour · `{` / `}` move left/right · `x` close |
-| Recovery | `u` restore from a snapshot · `M` merge same-named groups |
+| Recovery | `u` restore from a snapshot · `r` reopen closed group · `M` merge same-named groups |
 | Other | `o` options |
 
 ### Picker modes
@@ -251,7 +255,7 @@ reply with an `ActionResult`; errors are shown inline and the picker stays open.
 - [x] **M4** group management + move tab + leader mode + options page
 - [x] **M5** snapshots
 - [ ] **M6** restore + duplicate merge *(implemented, awaiting manual test)*
-- [ ] **M7** polish: reopen closed group, etc.
+- [ ] **M7** polish: reopen closed group *(implemented, awaiting manual test)*, etc.
 
 ## Verified Chrome behaviours
 

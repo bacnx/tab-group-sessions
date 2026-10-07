@@ -23,6 +23,7 @@ export const CMD = {
   moveGroupRight: '29-move-group-right',
   restoreSnapshot: '50-restore-snapshot',
   mergeDuplicateGroups: '51-merge-duplicate-groups',
+  reopenClosedGroup: '52-reopen-closed-group',
   nextTabInGroup: '30-next-tab-in-group',
   prevTabInGroup: '31-prev-tab-in-group',
   openDiagnostics: '90-open-diagnostics',

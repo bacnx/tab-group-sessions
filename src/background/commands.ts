@@ -6,7 +6,7 @@ import type { PickerMode } from '../shared/messages';
 import { cycleGroup, cycleTabInGroup, gotoTabInGroup, lastGroup } from './actions';
 import { isNormalWindow } from './focus';
 import { openPicker, openPickerWindow } from './launcher';
-import { moveCurrentGroup } from './manage';
+import { moveCurrentGroup, reopenClosedGroup } from './manage';
 import { enqueue } from './queue';
 import { mergeDuplicateGroups } from './restore';
 
@@ -64,6 +64,8 @@ export function runCommand(command: string, windowHint?: number): void {
         return moveCurrentGroup(windowId, 1);
       case CMD.mergeDuplicateGroups:
         return void (await mergeDuplicateGroups(windowId));
+      case CMD.reopenClosedGroup:
+        return reopenClosedGroup(windowId);
     }
     const n = parseGotoTab(command);
     if (n !== undefined) return gotoTabInGroup(windowId, n);

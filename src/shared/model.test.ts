@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NO_GROUP, cycle, decidePlacement, isNewTabPageUrl, groupOrder, isTitleTaken, moveGroupIndex, mruFromTabs, nthItem, titleError, pickTabToActivate, touchMru, type TabLike } from './model';
+import { NO_GROUP, cycle, decidePlacement, isNewTabPageUrl, groupOrder, isTitleTaken, moveGroupIndex, mruFromTabs, nthItem, titleError, pickTabToActivate, pushClosed, touchMru, type TabLike } from './model';
 
 const tab = (index: number, groupId: number, extra: Partial<TabLike> = {}): TabLike => ({
   id: index + 100,
@@ -174,5 +174,13 @@ describe('isNewTabPageUrl', () => {
     expect(isNewTabPageUrl('chrome://new-tab-page/')).toBe(true);
     expect(isNewTabPageUrl('https://teams.microsoft.com/')).toBe(false);
     expect(isNewTabPageUrl(undefined)).toBe(false);
+  });
+});
+
+describe('pushClosed', () => {
+  it('keeps the most recent first and caps the stack', () => {
+    let stack: number[] = [];
+    for (const n of [1, 2, 3, 4]) stack = pushClosed(stack, n, 3);
+    expect(stack).toEqual([4, 3, 2]);
   });
 });

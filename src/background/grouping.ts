@@ -185,7 +185,7 @@ async function addToInbox(windowId: number, groups: chrome.tabGroups.TabGroup[],
   }
 }
 
-async function keepInboxLast(windowId: number): Promise<void> {
+export async function keepInboxLast(windowId: number): Promise<void> {
   const inbox = findInbox(await chrome.tabGroups.query({ windowId }));
   if (!inbox) return;
   const order = groupOrder(await chrome.tabs.query({ windowId }));

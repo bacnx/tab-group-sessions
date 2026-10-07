@@ -157,3 +157,8 @@ export function moveGroupIndex(
   if (!next || next.id === pinnedLastId) return undefined;
   return next.last - self.count + 1;
 }
+
+/** Pushes onto a most-recent-first stack capped at `max`. */
+export function pushClosed<T>(stack: readonly T[], item: T, max: number): T[] {
+  return [item, ...stack].slice(0, max);
+}

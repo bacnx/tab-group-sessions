@@ -110,6 +110,9 @@
     "51-merge-duplicate-groups": {
       "description": "Recovery · Merge groups with the same name in this window"
     },
+    "52-reopen-closed-group": {
+      "description": "Recovery · Reopen the last group closed from the keyboard"
+    },
     "90-open-diagnostics": {
       "suggested_key": {
         "default": "Alt+Shift+D"
