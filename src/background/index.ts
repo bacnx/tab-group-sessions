@@ -5,6 +5,7 @@ import './diag';
 import { handleGroupRemoved } from './actions';
 import { handleCommand } from './commands';
 import { syncFocus } from './focus';
+import { forgetPickerWindow } from './launcher';
 import { enqueue } from './queue';
 import { clearWindowState } from './state';
 
@@ -24,7 +25,10 @@ chrome.tabGroups.onRemoved.addListener((group) => {
 });
 
 chrome.windows.onRemoved.addListener((windowId) => {
-  void enqueue('windows.onRemoved', () => clearWindowState(windowId));
+  void enqueue('windows.onRemoved', async () => {
+    await clearWindowState(windowId);
+    await forgetPickerWindow(windowId);
+  });
 });
 
 chrome.commands.onCommand.addListener(handleCommand);

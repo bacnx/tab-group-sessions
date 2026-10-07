@@ -202,5 +202,23 @@ here is still an assumption.
   on `chrome://settings` and `chrome://extensions`.
 - `Alt+G` is taken by Chrome (Gemini) — an extension cannot claim it.
 
-Still to verify: `chrome.action.openPopup()` path, popup-window fallback, NTP / PDF / Web Store /
-fullscreen focus, Ctrl+Tab over collapsed groups, boot/restore ordering, saved-group leftovers.
+- `chrome.action.openPopup()` from a command works (no user-gesture problem); input focused
+  within ~20 ms. The popup-window fallback opens in ~45 ms with the input focused. NTP verified.
+- Commands still fire while the picker *window* is focused; `tab` then belongs to that popup
+  window, so launchers/actions must resolve the target normal window themselves.
+- **Clicking a tab with the mouse makes tab/group edits fail for a moment** with
+  "Tabs cannot be edited right now (user may be dragging a tab)". The queue retries such tasks
+  with backoff (up to ~5 s).
+- **Closing the last window does not necessarily end the browser session**: Chrome kept
+  running (service worker and `storage.session` survived, no `onStartup`) and the window came
+  back ~1.5 s later via `windows.onCreated`, fully restored. So restore/reconcile must also run
+  per *window creation*, not only on a fresh boot.
+- Window restore is a burst of ~50 ms: tabs are created, the first tab of each group arrives
+  ungrouped (groupId -1) and is grouped immediately after; `tabGroups.onCreated` arrives with
+  an empty title and the title follows in a later `onUpdated`; collapsed state is restored.
+  Consequences: stray-tab grouping and untitled-group auto-naming must wait for the burst to
+  settle, otherwise they hijack restored tabs/groups. The same "untitled first" pattern applies
+  to groups the extension creates itself.
+
+Still to verify: PDF / Web Store / fullscreen focus, Ctrl+Tab over collapsed groups, a real
+browser restart (Exit from the menu), saved-group leftovers.
