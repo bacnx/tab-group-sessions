@@ -264,11 +264,15 @@ reply with an `ActionResult`; errors are shown inline and the picker stays open.
 - [x] **M0** scaffold + spike (probes removed after M7; record in `docs/m0-verification.md`)
 - [x] **M1** focus engine: queue, state, onActivated → focusGroup, next/prev/last-group
 - [x] **M2** auto-grouping: new tabs → active/opener group, strays → Inbox (kept last)
-- [ ] **M3** unified picker: fuzzy search, popup + window fallback, in-group tab navigation *(implemented, awaiting manual test)*
+- [x] **M3** unified picker: fuzzy search, popup + window fallback, in-group tab navigation
 - [x] **M4** group management + move tab + leader mode + options page
 - [x] **M5** snapshots
-- [ ] **M6** restore + duplicate merge *(implemented, awaiting manual test)*
-- [ ] **M7** polish: reopen closed group, cross-window duplicate merge, M0 probes removed, README *(implemented, awaiting manual test)*
+- [x] **M6** restore + duplicate merge (auto-restore verified; the discard-after-commit fix,
+  manual `u`, normal restart and `M` were not re-tested before 0.1.0)
+- [x] **M7** polish: reopen closed group, cross-window duplicate merge, M0 probes removed,
+  README, default key layout (verified in Options) — reopen and cross-window merge not
+  tested in Chrome before 0.1.0
+- **0.1.0** released after M7
 
 ## Verified Chrome behaviours
 
