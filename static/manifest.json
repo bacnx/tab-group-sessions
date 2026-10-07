@@ -22,11 +22,14 @@
   "commands": {
     "_execute_action": {
       "suggested_key": {
-        "default": "Alt+S"
+        "default": "Alt+A"
       },
       "description": "Picker · Leader menu (or search, see Options)"
     },
     "10-open-picker": {
+      "suggested_key": {
+        "default": "Alt+S"
+      },
       "description": "Picker · Open (falls back to a window in fullscreen)"
     },
     "11-open-picker-window": {
@@ -114,9 +117,6 @@
       "description": "Recovery · Reopen the last group closed from the keyboard"
     },
     "90-open-diagnostics": {
-      "suggested_key": {
-        "default": "Alt+Shift+D"
-      },
       "description": "Debug · Open the diagnostics page"
     }
   },

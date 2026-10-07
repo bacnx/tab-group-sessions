@@ -29,6 +29,36 @@ export const CMD = {
   openDiagnostics: '90-open-diagnostics',
 } as const;
 
+/**
+ * The agreed default layout. Chrome applies at most 4 `suggested_key`s, and only on the first
+ * install, so the manifest carries the first four (marked `suggested`) and the rest are bound
+ * by hand; the Options page compares this table with the live bindings.
+ * Keys are in manifest syntax (`Alt+Period`).
+ */
+export const RECOMMENDED_KEYS: readonly { command: string; key: string; suggested?: boolean }[] = [
+  { command: '_execute_action', key: 'Alt+A', suggested: true },
+  { command: CMD.openPicker, key: 'Alt+S', suggested: true },
+  { command: CMD.nextGroup, key: 'Alt+Period', suggested: true },
+  { command: CMD.prevGroup, key: 'Alt+Comma', suggested: true },
+  { command: CMD.lastGroup, key: 'Alt+L' },
+  { command: CMD.moveTab, key: 'Alt+M' },
+  { command: CMD.newGroup, key: 'Alt+C' },
+  { command: CMD.closeGroup, key: 'Alt+X' },
+  ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => ({ command: gotoTabCommand(n), key: `Alt+${n}` })),
+  { command: CMD.openDiagnostics, key: 'Alt+Shift+D' },
+];
+
+/** Canonical form for comparing a manifest key with what chrome.commands reports
+ * (which may use `.`/`,` and other spellings). */
+export function normalizeShortcut(shortcut: string): string {
+  return shortcut
+    .split('+')
+    .map((part) => part.trim().toLowerCase())
+    .map((part) => ({ period: '.', comma: ',', command: 'cmd', '⌘': 'cmd', '⌥': 'alt', '⇧': 'shift', '⌃': 'macctrl' })[part] ?? part)
+    .sort()
+    .join('+');
+}
+
 const GOTO_TAB = /^4([1-9])-goto-tab-\1$/;
 
 export function gotoTabCommand(n: number): string {

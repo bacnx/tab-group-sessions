@@ -1,5 +1,6 @@
 // Options page — fully keyboard operable (native checkbox / button semantics).
 
+import { RECOMMENDED_KEYS, normalizeShortcut } from '../shared/commands';
 import { getSettings, updateSettings, type Settings } from '../shared/settings';
 
 const leader = document.getElementById('leaderEnabled') as HTMLInputElement;
@@ -42,4 +43,31 @@ document.getElementById('shortcuts')!.addEventListener('click', () => {
   void chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
 });
 
+/** `Alt+Period` → `Alt+.` for display. */
+const displayKey = (key: string) => key.replace(/Period/, '.').replace(/Comma/, ',');
+
+async function renderKeys(): Promise<void> {
+  const live = new Map((await chrome.commands.getAll()).map((c) => [c.name ?? '', c]));
+  const rows = RECOMMENDED_KEYS.map(({ command, key }) => {
+    const current = live.get(command)?.shortcut ?? '';
+    const state = !current ? 'unbound' : normalizeShortcut(current) === normalizeShortcut(key) ? 'ok' : 'differs';
+    const tr = document.createElement('tr');
+    tr.className = state;
+    const description = command === '_execute_action' ? 'Picker · Leader menu' : (live.get(command)?.description ?? command);
+    for (const text of [description, displayKey(key), current || 'not bound']) {
+      const td = document.createElement('td');
+      td.textContent = text;
+      tr.append(td);
+    }
+    return tr;
+  });
+  document.querySelector('#keys tbody')!.replaceChildren(...rows);
+}
+
+// Coming back from chrome://extensions/shortcuts: show the new bindings.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') void renderKeys();
+});
+
 void main();
+void renderKeys();

@@ -87,13 +87,25 @@ Every action is also a command that can be bound to a key at `chrome://extension
 Commands are numbered so they sort by category: 1x picker, 2x group, 3x tab, 4x go to tab N,
 5x recovery, 9x debug.
 
-Bound for now, temporarily:
+Default layout. Only the most frequent actions get a key; everything else goes through the
+leader menu.
 
-- `Alt+S`: leader menu
-- `Alt+.` / `Alt+,`: next / previous group
-- `Alt+Shift+D`: diagnostics
+| Key | Action |
+|---|---|
+| `Alt+A` | Leader menu * |
+| `Alt+S` | Search * |
+| `Alt+.` / `Alt+,` | Next / previous group * |
+| `Alt+L` | Last used group |
+| `Alt+1`–`Alt+9` | Go to tab N of the group (`9` = last) |
+| `Alt+M` | Move the current tab to a group |
+| `Alt+C` | New group |
+| `Alt+X` | Close group (asks first) |
+| `Alt+Shift+D` | Diagnostics |
 
-The final key layout is still to be decided.
+Chrome binds only the keys marked * by itself, and only on the first install. Bind the rest by
+hand. Options → "Keyboard shortcuts" lists every recommended key next to its current binding.
+Keys avoided on purpose: `Alt+F`/`Alt+E` (Chrome menu), `Alt+D` (address bar), `Alt+G`
+(Gemini), `Alt+Space` (Windows), `Alt+Z` (Unikey/EVKey), `Alt+Shift+letter` (Google Docs menus).
 
 Chrome has some limits on which keys a command can use:
 

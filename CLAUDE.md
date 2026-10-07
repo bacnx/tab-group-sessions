@@ -205,14 +205,20 @@ scripts/build.mjs      esbuild build / watch
 
 ## Commands
 
-Names are final; keys are not chosen yet (user will decide). `chrome.commands` limits:
+Names are final. `chrome.commands` limits:
 max 4 `suggested_key`s; must include Ctrl or Alt (Mac: Command/MacCtrl/Alt); `Ctrl+Alt` is
 forbidden; keys limited to A–Z, 0–9, Comma, Period, Home, End, PageUp, PageDown, Space,
 Insert, Delete, arrows, media keys; Chrome's Ctrl+T/W/N/Tab/1..9 and Alt+G (Gemini) can't be
 taken; avoid Alt+Space (Windows window menu) and Unikey/EVKey hotkeys.
 
-Temporary keys while developing: `Alt+S` action popup, `Alt+Period` / `Alt+Comma`
-next/prev group, `Alt+Shift+D` diagnostics. Everything else unbound.
+**Default layout (agreed)** — source of truth `RECOMMENDED_KEYS` in `shared/commands.ts`;
+a unit test keeps the manifest's `suggested_key`s equal to the entries marked `suggested`:
+`Alt+A` leader (`_execute_action`)*, `Alt+S` search (`10`)*, `Alt+.` / `Alt+,` next/prev
+group*, `Alt+L` last group, `Alt+1..9` goto tab, `Alt+M` move tab, `Alt+C` new group, `Alt+X`
+close group, `Alt+Shift+D` diagnostics. (* = suggested in the manifest; the rest are bound by
+hand.) Everything else goes through the leader. Options shows recommended vs. current bindings.
+Also avoided: Alt+F/Alt+E (Chrome menu), Alt+D (address bar), Alt+Z (Unikey), Alt+Shift+letter
+(Google Docs menu accelerators).
 
 Command names live in `src/shared/commands.ts` (`CMD`) and must match `static/manifest.json`
 (enforced by a unit test). Chrome lists commands **sorted by name**, so names carry a numeric
@@ -262,7 +268,7 @@ reply with an `ActionResult`; errors are shown inline and the picker stays open.
 - [x] **M4** group management + move tab + leader mode + options page
 - [x] **M5** snapshots
 - [ ] **M6** restore + duplicate merge *(implemented, awaiting manual test)*
-- [ ] **M7** polish: reopen closed group, cross-window duplicate merge, M0 probes removed, README *(implemented, awaiting manual test)*; default key layout still to decide
+- [ ] **M7** polish: reopen closed group, cross-window duplicate merge, M0 probes removed, README *(implemented, awaiting manual test)*
 
 ## Verified Chrome behaviours
 
