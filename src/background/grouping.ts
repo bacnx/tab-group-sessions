@@ -17,6 +17,8 @@ import { isReady } from './state';
 const QUIET_MS = 300;
 const MAX_WAIT_MS = 3000;
 const NEW_TAB_TTL_MS = 10_000;
+const PICKER_INPUT_GRACE_MS = 1000;
+const PICKER_CLOSE_CHECK_MS = 150;
 
 interface NewTab {
   openerTabId?: number;
@@ -56,14 +58,33 @@ export function recordUserInChrome(): void {
   setChromeFocused(true);
 }
 
-/** Picker pages hold a port named 'picker' while open. */
+/** Picker pages hold a port named 'picker' while open and report every key/click on it. */
 export function trackPickerPort(port: chrome.runtime.Port): void {
   if (port.name !== 'picker') return;
   openPickers++;
   setChromeFocused(true);
+  let lastInputAt = 0;
+  port.onMessage.addListener(() => {
+    lastInputAt = Date.now();
+  });
   port.onDisconnect.addListener(() => {
     openPickers = Math.max(0, openPickers - 1);
-    setChromeFocused(true); // focus returns to the browser window, without an event
+    // Closed right after a key/click (Enter, Esc, an action): the picker closed itself and
+    // focus returns to the browser window, without an event.
+    if (Date.now() - lastInputAt < PICKER_INPUT_GRACE_MS) {
+      setChromeFocused(true);
+      return;
+    }
+    // Otherwise the popup lost focus — usually because the user switched to another app,
+    // which reports no WINDOW_ID_NONE (Chrome already counted as unfocused while the popup
+    // was open). Ask Chrome once the dust has settled.
+    setTimeout(() => {
+      void chrome.windows.getAll({ windowTypes: ['normal', 'popup'] }).then((wins) => {
+        const focused = wins.some((w) => w.focused);
+        log('focus.pickerLostFocus', { focused });
+        if (openPickers === 0) setChromeFocused(focused);
+      });
+    }, PICKER_CLOSE_CHECK_MS);
   });
 }
 

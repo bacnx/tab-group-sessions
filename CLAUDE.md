@@ -47,8 +47,9 @@ Shortcuts: `chrome://extensions/shortcuts`. Suggested keys in the manifest only 
    else the active (MRU) group; a new tab created **while Chrome had no focus** (link clicked in
    another app) → Inbox; any other stray (dragged out, restored ungrouped, unpinned) → Inbox.
    Focus is tracked via `windows.onFocusChanged` (memory + `storage.session`), corrected by
-   evidence the user is in Chrome: a keyboard command, the picker's runtime port opening or
-   closing. A tab that opens on the New Tab page is always internal.
+   evidence the user is in Chrome: a keyboard command, the picker's runtime port opening, or the
+   picker closing within 1 s of a key/click in it. A picker that closes without recent input lost
+   focus (usually to another app) → focus is re-read via `windows.getAll()` after 150 ms. A tab that opens on the New Tab page is always internal.
    `openerTabId` is useless for this: Chrome sets it to the active tab for external links too. Placement runs in a per-window sweep
    debounced to 300 ms of quiet (max 3 s), never directly from a single event.
 4. **Unified picker** (one fuzzy search over groups *and* tabs, all windows):
@@ -331,6 +332,9 @@ here is still an assumption.
 - **Opening an extension popup reports `windows.onFocusChanged(WINDOW_ID_NONE)`, and closing
   it reports nothing** — focus silently returns to the browser window. Focus tracking alone
   therefore misclassified every Ctrl+T after using the picker as external.
+- Switching from the open action popup to another app reports no `onFocusChanged` either
+  (Chrome already counts as unfocused). Treating every picker close as "back in Chrome" made
+  the next external link land in the active group instead of Inbox.
 - Extension pages (diagnostics, picker) load fresh files from `dist/` on open, but the manifest
   and service worker only change on **reload** — the diagnostics `build` line can be newer
   than the running worker (compare with `sw.start.build`).

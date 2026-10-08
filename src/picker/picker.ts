@@ -20,8 +20,12 @@ if (inWindow) document.body.classList.add('in-window');
 
 const closePicker = () => window.close();
 
-// Lets the service worker know a picker is open (see grouping.ts focus tracking).
-chrome.runtime.connect({ name: 'picker' });
+// Lets the service worker know a picker is open (see grouping.ts focus tracking). Input is
+// reported so that a close right after a key/click counts as "the user is still in Chrome".
+const pickerPort = chrome.runtime.connect({ name: 'picker' });
+const reportInput = () => pickerPort.postMessage('input');
+document.addEventListener('keydown', reportInput, true);
+document.addEventListener('pointerdown', reportInput, true);
 
 async function resolveWindowId(): Promise<number> {
   const origin = Number(params.get('origin'));
