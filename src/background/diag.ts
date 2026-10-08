@@ -61,6 +61,20 @@ chrome.windows.onCreated.addListener((w) => log('windows.onCreated', { id: w.id,
 chrome.windows.onRemoved.addListener((id) => log('windows.onRemoved', { id }));
 chrome.windows.onFocusChanged.addListener((id) => log('windows.onFocusChanged', { id }));
 
+// --- navigation ----------------------------------------------------------------------------
+
+// Probe: the transition type tells external links (expected 'auto_toplevel') from links,
+// bookmarks and extension-created tabs. Top frame only.
+chrome.webNavigation.onCommitted.addListener((d) => {
+  if (d.frameId !== 0) return;
+  log('webNavigation.onCommitted', {
+    tabId: d.tabId,
+    transition: d.transitionType,
+    qualifiers: d.transitionQualifiers,
+    url: shortUrl(d.url),
+  });
+});
+
 chrome.commands.onCommand.addListener((command, tab) => {
   log('commands.onCommand', { command, tabId: tab?.id, windowId: tab?.windowId });
 });

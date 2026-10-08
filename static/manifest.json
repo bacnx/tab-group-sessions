@@ -9,7 +9,8 @@
     "tabGroups",
     "storage",
     "alarms",
-    "favicon"
+    "favicon",
+    "webNavigation"
   ],
   "background": {
     "service_worker": "background.js",
