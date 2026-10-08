@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NO_GROUP, cycle, decidePlacement, isNewTabPageUrl, groupOrder, isTitleTaken, moveGroupIndex, mruFromTabs, nthItem, titleError, pickTabToActivate, pushClosed, touchMru, type TabLike } from './model';
+import { NO_GROUP, cycle, decidePlacement, isExternalTransition, isNewTabPageUrl, groupOrder, isTitleTaken, moveGroupIndex, mruFromTabs, nthItem, titleError, pickTabToActivate, pushClosed, touchMru, type TabLike } from './model';
 
 const tab = (index: number, groupId: number, extra: Partial<TabLike> = {}): TabLike => ({
   id: index + 100,
@@ -165,6 +165,15 @@ describe('moveGroupIndex', () => {
   it('never moves past or moves the pinned-last group', () => {
     expect(moveGroupIndex(tabs, 3, 1, 9)).toBeUndefined();
     expect(moveGroupIndex(tabs, 9, -1, 9)).toBeUndefined();
+  });
+});
+
+describe('isExternalTransition', () => {
+  it('only start_page (URL handed over by another app) is external', () => {
+    expect(isExternalTransition('start_page')).toBe(true);
+    for (const t of ['link', 'typed', 'auto_bookmark', 'reload', 'generated', 'form_submit']) {
+      expect(isExternalTransition(t)).toBe(false);
+    }
   });
 });
 

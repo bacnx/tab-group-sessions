@@ -67,13 +67,22 @@ export function isNewTabPageUrl(url: string | undefined): boolean {
   return url === 'chrome://newtab/' || url === 'chrome://new-tab-page/';
 }
 
+/**
+ * Whether a new tab's first committed navigation came from another app. Chrome commits URLs
+ * handed over by other apps (command line) as `start_page`; links, extension-created tabs,
+ * Ctrl+T (`typed`) and bookmarks (`auto_bookmark`) use other types (verified on Windows).
+ */
+export function isExternalTransition(transitionType: string): boolean {
+  return transitionType === 'start_page';
+}
+
 export type Placement = { kind: 'group'; groupId: number } | { kind: 'inbox' };
 
 export interface PlacementInput {
   /** Created moments ago (seen in tabs.onCreated), as opposed to an existing stray tab. */
   isNew: boolean;
   /**
-   * Created while no Chrome window had focus, i.e. by another app (a link clicked in Teams…).
+   * Opened by another app (a link clicked in Teams…), see `isExternalTransition`.
    * `openerTabId` can't tell this apart: Chrome sets it to the active tab for external links too.
    */
   external: boolean;

@@ -9,7 +9,7 @@
 // After a short quiet period the sweep re-reads the window and only then acts.
 
 import { log } from '../shared/log';
-import { INBOX_TITLE, NO_GROUP, decidePlacement, groupOrder, isNewTabPageUrl } from '../shared/model';
+import { INBOX_TITLE, NO_GROUP, decidePlacement, groupOrder, isExternalTransition, isNewTabPageUrl } from '../shared/model';
 import { getActiveTab, isNormalWindow, loadMru } from './focus';
 import { enqueue } from './queue';
 import { isReady } from './state';
@@ -17,13 +17,14 @@ import { isReady } from './state';
 const QUIET_MS = 300;
 const MAX_WAIT_MS = 3000;
 const NEW_TAB_TTL_MS = 10_000;
-const PICKER_INPUT_GRACE_MS = 1000;
-const PICKER_CLOSE_CHECK_MS = 150;
+/** How long a new tab may stay ungrouped while waiting for its first commit. */
+const COMMIT_WAIT_MS = 5000;
 
 interface NewTab {
+  windowId: number;
   openerTabId?: number;
   at: number;
-  /** Created while Chrome had no focused window. Undefined until known (async lookup). */
+  /** Opened by another app. Undefined until the first navigation commits. */
   external?: boolean;
 }
 
@@ -31,77 +32,26 @@ interface NewTab {
  * well within the service worker's lifetime, and losing this just means "treat as stray". */
 const newTabs = new Map<number, NewTab>();
 
-// Whether any Chrome window has focus. Kept in memory and mirrored to storage.session because
-// the service worker usually sleeps while the user is in another app.
-//
-// windows.onFocusChanged alone is not enough: opening an extension popup (our picker) reports
-// WINDOW_ID_NONE, and closing it does NOT report the browser window again. So the focus flag
-// is also set by evidence that the user is in Chrome: a keyboard command, or the picker
-// being open/closed (tracked through a runtime port).
-const FOCUS_KEY = 'chromeFocused';
-let chromeFocused: boolean | undefined;
-let openPickers = 0;
-
-function setChromeFocused(focused: boolean): void {
-  chromeFocused = focused;
-  void chrome.storage.session.set({ [FOCUS_KEY]: focused });
-}
-
-export function recordFocusChange(windowId: number): void {
-  const focused = windowId !== chrome.windows.WINDOW_ID_NONE;
-  if (!focused && openPickers > 0) return; // focus moved into our own popup
-  setChromeFocused(focused);
-}
-
-/** A keyboard command fired: Chrome has focus. */
-export function recordUserInChrome(): void {
-  setChromeFocused(true);
-}
-
-/** Picker pages hold a port named 'picker' while open and report every key/click on it. */
-export function trackPickerPort(port: chrome.runtime.Port): void {
-  if (port.name !== 'picker') return;
-  openPickers++;
-  setChromeFocused(true);
-  let lastInputAt = 0;
-  port.onMessage.addListener(() => {
-    lastInputAt = Date.now();
-  });
-  port.onDisconnect.addListener(() => {
-    openPickers = Math.max(0, openPickers - 1);
-    // Closed right after a key/click (Enter, Esc, an action): the picker closed itself and
-    // focus returns to the browser window, without an event.
-    if (Date.now() - lastInputAt < PICKER_INPUT_GRACE_MS) {
-      setChromeFocused(true);
-      return;
-    }
-    // Otherwise the popup lost focus — usually because the user switched to another app,
-    // which reports no WINDOW_ID_NONE (Chrome already counted as unfocused while the popup
-    // was open). Ask Chrome once the dust has settled.
-    setTimeout(() => {
-      void chrome.windows.getAll({ windowTypes: ['normal', 'popup'] }).then((wins) => {
-        const focused = wins.some((w) => w.focused);
-        log('focus.pickerLostFocus', { focused });
-        if (openPickers === 0) setChromeFocused(focused);
-      });
-    }, PICKER_CLOSE_CHECK_MS);
-  });
-}
+// A new tab is external (opened by another app) when its first committed navigation has the
+// `start_page` transition. Window focus can't tell: on Windows Chrome reports no focus loss when
+// the user switches to another app, reports one after Alt+… shortcuts, and opening an extension
+// popup reports a loss that its closing never undoes.
 
 export function recordNewTab(tab: chrome.tabs.Tab): void {
   if (tab.id === undefined) return;
-  const entry: NewTab = { openerTabId: tab.openerTabId, at: Date.now() };
+  const entry: NewTab = { windowId: tab.windowId, openerTabId: tab.openerTabId, at: Date.now() };
+  // Ctrl+T / + button; other apps never open the New Tab page.
+  if (isNewTabPageUrl(tab.pendingUrl || tab.url)) entry.external = false;
   newTabs.set(tab.id, entry);
-  if (isNewTabPageUrl(tab.pendingUrl || tab.url)) {
-    entry.external = false; // Ctrl+T / + button; other apps never open the New Tab page
-  } else if (chromeFocused !== undefined) {
-    entry.external = !chromeFocused;
-  } else {
-    // Issued before any later focus event is handled, so it reads the pre-creation value.
-    void chrome.storage.session.get(FOCUS_KEY).then((r) => {
-      entry.external = r[FOCUS_KEY] === false;
-    });
-  }
+}
+
+/** webNavigation.onCommitted: the first top-frame commit of a new tab decides `external`. */
+export function recordCommit(details: chrome.webNavigation.WebNavigationTransitionCallbackDetails): void {
+  if (details.frameId !== 0) return;
+  const entry = newTabs.get(details.tabId);
+  if (!entry || entry.external !== undefined) return;
+  entry.external = isExternalTransition(details.transitionType);
+  scheduleSweep(entry.windowId);
 }
 
 const timers = new Map<number, { timer: ReturnType<typeof setTimeout>; firstAt: number }>();
@@ -165,9 +115,18 @@ async function sweepWindow(windowId: number): Promise<void> {
     const toGroup = new Map<number, number[]>();
     const toInbox: number[] = [];
     const decisions: unknown[] = [];
+    let waitMs = 0;
     for (const t of strays) {
       const id = t.id!;
       const info = newTabs.get(id);
+      if (info?.external === undefined && info !== undefined) {
+        // Not committed yet: wait for recordCommit, then fall back to "opened inside Chrome".
+        const left = info.at + COMMIT_WAIT_MS - Date.now();
+        if (left > 0) {
+          waitMs = waitMs > 0 ? Math.min(waitMs, left) : left;
+          continue;
+        }
+      }
       newTabs.delete(id);
       const opener = info?.openerTabId !== undefined ? tabs.find((o) => o.id === info.openerTabId) : undefined;
       const placement = decidePlacement({
@@ -185,7 +144,10 @@ async function sweepWindow(windowId: number): Promise<void> {
       await groupTabs(tabIds, { groupId });
     }
     if (toInbox.length > 0) await addToInbox(windowId, groups, toInbox);
-    log('grouping.sweep', { windowId, toGroup: Object.fromEntries(toGroup), toInbox, decisions });
+    if (decisions.length > 0 || toInbox.length > 0) {
+      log('grouping.sweep', { windowId, toGroup: Object.fromEntries(toGroup), toInbox, decisions });
+    }
+    if (waitMs > 0) scheduleSweep(windowId, waitMs);
   }
 
   await keepInboxLast(windowId);

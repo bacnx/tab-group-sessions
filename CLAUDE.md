@@ -42,14 +42,13 @@ Shortcuts: `chrome://extensions/shortcuts`. Suggested keys in the manifest only 
 3. **New tabs** (Ctrl+T, links, …) go into the active group (or the opener's group), placed at
    the **end of the group**. Tabs that Chrome already put in a group are left alone.
    Tabs opened by external apps go to Inbox.
-   Implementation rule (`decidePlacement`): a *new* tab created **while a Chrome window had
-   focus** (Ctrl+T, bookmark, link from an ungrouped tab, extension-created) → opener's group,
-   else the active (MRU) group; a new tab created **while Chrome had no focus** (link clicked in
-   another app) → Inbox; any other stray (dragged out, restored ungrouped, unpinned) → Inbox.
-   Focus is tracked via `windows.onFocusChanged` (memory + `storage.session`), corrected by
-   evidence the user is in Chrome: a keyboard command, the picker's runtime port opening, or the
-   picker closing within 1 s of a key/click in it. A picker that closes without recent input lost
-   focus (usually to another app) → focus is re-read via `windows.getAll()` after 150 ms. A tab that opens on the New Tab page is always internal.
+   Implementation rule (`decidePlacement`): a *new* tab whose first committed top-frame
+   navigation (`webNavigation.onCommitted`) has transition **`start_page`** was handed over by
+   another app → Inbox; any other new tab (Ctrl+T, link, bookmark, extension-created) → opener's
+   group, else the active (MRU) group; any other stray (dragged out, restored ungrouped,
+   unpinned) → Inbox. A new tab stays ungrouped until it commits (max 5 s, then "internal").
+   A tab that opens on the New Tab page is always internal. Window focus is **not** used: it
+   proved unreliable on Windows (see verified behaviours).
    `openerTabId` is useless for this: Chrome sets it to the active tab for external links too. Placement runs in a per-window sweep
    debounced to 300 ms of quiet (max 3 s), never directly from a single event.
 4. **Unified picker** (one fuzzy search over groups *and* tabs, all windows):
@@ -104,7 +103,7 @@ Shortcuts: `chrome://extensions/shortcuts`. Suggested keys in the manifest only 
 ## Architecture
 
 No content scripts, no host permissions. Permissions: `tabs`, `tabGroups`, `storage`, `alarms`,
-`favicon` (picker icons via `/_favicon/`).
+`favicon` (picker icons via `/_favicon/`), `webNavigation` (external-tab detection).
 
 ```
 src/
@@ -327,14 +326,18 @@ here is still an assumption.
   seeded from `tab.lastAccessed` whenever it is empty.
 - **Links opened from another app (Teams) get `openerTabId` = the active tab**, exactly like
   Ctrl+T, are created ungrouped at the end of the strip and activated. `tabs.onCreated` for
-  such a tab arrives **before** Chrome's window regains focus, so "no focused Chrome window at
-  creation" reliably identifies external tabs (verified with Teams).
+  such a tab arrives **before** Chrome's window regains focus — but "no focused Chrome window at
+  creation" turned out NOT to be reliable (see below).
 - **Opening an extension popup reports `windows.onFocusChanged(WINDOW_ID_NONE)`, and closing
   it reports nothing** — focus silently returns to the browser window. Focus tracking alone
   therefore misclassified every Ctrl+T after using the picker as external.
-- Switching from the open action popup to another app reports no `onFocusChanged` either
-  (Chrome already counts as unfocused). Treating every picker close as "back in Chrome" made
-  the next external link land in the active group instead of Inbox.
+- **`windows.onFocusChanged` is unreliable on Windows** (Chrome 154): switching from Chrome to
+  another app often reports nothing, Alt+… extension shortcuts are followed ~5–12 ms later by a
+  spurious `WINDOW_ID_NONE`, and closing the action popup by switching apps reports nothing.
+  Focus-based external-tab detection misplaced tabs both ways.
+- **Links opened from another app commit with transition `start_page`** (Teams verified);
+  extension-created tabs commit as `link`, Ctrl+T as `typed`, bookmarks as `auto_bookmark`.
+  The first commit arrives ~175 ms after `tabs.onCreated`.
 - Extension pages (diagnostics, picker) load fresh files from `dist/` on open, but the manifest
   and service worker only change on **reload** — the diagnostics `build` line can be newer
   than the running worker (compare with `sw.start.build`).
