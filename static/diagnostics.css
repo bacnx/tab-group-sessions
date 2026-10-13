@@ -1,12 +1,22 @@
-/* Catppuccin Mocha — https://catppuccin.com/palette/ */
+/* Catppuccin — https://catppuccin.com/palette/ — Latte (light), Mocha (dark). */
 :root {
-  color-scheme: dark;
-  --bg: #1e1e2e;     /* base */
-  --fg: #cdd6f4;     /* text */
-  --muted: #a6adc8;  /* subtext 0 */
-  --border: #45475a; /* surface 1 */
-  --accent: #89b4fa; /* blue */
-  --boot: #f9e2af;   /* yellow */
+  color-scheme: light dark;
+  --bg: #eff1f5;        /* base */
+  --fg: #4c4f69;        /* text */
+  --muted: #6c6f85;     /* subtext 0 */
+  --border: #bcc0cc;    /* surface 1 */
+  --accent: #1e66f5;    /* blue */
+  --boot: #df8e1d;      /* yellow */
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e2e;        /* base */
+    --fg: #cdd6f4;        /* text */
+    --muted: #a6adc8;     /* subtext 0 */
+    --border: #45475a;    /* surface 1 */
+    --accent: #89b4fa;    /* blue */
+    --boot: #f9e2af;      /* yellow */
+  }
 }
 body {
   margin: 0;

@@ -1,16 +1,30 @@
-/* Catppuccin Mocha — https://catppuccin.com/palette/ */
+/* Catppuccin — https://catppuccin.com/palette/ — Latte (light), Mocha (dark). */
 :root {
-  color-scheme: dark;
-  --bg: #1e1e2e;       /* base */
-  --fg: #cdd6f4;       /* text */
-  --muted: #a6adc8;    /* subtext 0 */
-  --border: #45475a;   /* surface 1 */
-  --accent: #89b4fa;   /* blue */
-  --selected: #313244; /* surface 0 */
-  --mark: #fab387;     /* peach */
-  /* Chrome group colours mapped onto the Mocha accents. */
-  --g-grey: #7f849c; --g-blue: #89b4fa; --g-red: #f38ba8; --g-yellow: #f9e2af; --g-green: #a6e3a1;
-  --g-pink: #f5c2e7; --g-purple: #cba6f7; --g-cyan: #94e2d5; --g-orange: #fab387;
+  color-scheme: light dark;
+  --bg: #eff1f5;        /* base */
+  --fg: #4c4f69;        /* text */
+  --muted: #6c6f85;     /* subtext 0 */
+  --border: #bcc0cc;    /* surface 1 */
+  --accent: #1e66f5;    /* blue */
+  --selected: #ccd0da;  /* surface 0 */
+  --mark: #fe640b;      /* peach */
+  /* Chrome group colours mapped onto the Catppuccin accents. */
+  --g-grey: #8c8fa1; --g-blue: #1e66f5; --g-red: #d20f39; --g-yellow: #df8e1d; --g-green: #40a02b;
+  --g-pink: #ea76cb; --g-purple: #8839ef; --g-cyan: #179299; --g-orange: #fe640b;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e2e;        /* base */
+    --fg: #cdd6f4;        /* text */
+    --muted: #a6adc8;     /* subtext 0 */
+    --border: #45475a;    /* surface 1 */
+    --accent: #89b4fa;    /* blue */
+    --selected: #313244;  /* surface 0 */
+    --mark: #fab387;      /* peach */
+    /* Chrome group colours mapped onto the Catppuccin accents. */
+    --g-grey: #7f849c; --g-blue: #89b4fa; --g-red: #f38ba8; --g-yellow: #f9e2af; --g-green: #a6e3a1;
+    --g-pink: #f5c2e7; --g-purple: #cba6f7; --g-cyan: #94e2d5; --g-orange: #fab387;
+  }
 }
 html, body {
   margin: 0;
