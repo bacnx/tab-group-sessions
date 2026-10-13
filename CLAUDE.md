@@ -126,6 +126,7 @@ src/
   shared/              types, message protocol, fuzzy matcher, reconcile + dedupe planners, keymap
 static/                manifest.json and HTML, copied as-is into dist/
 scripts/build.mjs      esbuild build / watch
+scripts/make-icons.mjs renders static/icons/*.png (dependency-free; PNGs are committed)
 ```
 
 ### State
