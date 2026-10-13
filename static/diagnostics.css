@@ -1,21 +1,12 @@
+/* Catppuccin Mocha — https://catppuccin.com/palette/ */
 :root {
-  color-scheme: light dark;
-  --bg: #ffffff;
-  --fg: #1f1f1f;
-  --muted: #6b6b6b;
-  --border: #d0d0d0;
-  --accent: #1a73e8;
-  --boot: #b06000;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #202124;
-    --fg: #e8eaed;
-    --muted: #9aa0a6;
-    --border: #3c4043;
-    --accent: #8ab4f8;
-    --boot: #fdd663;
-  }
+  color-scheme: dark;
+  --bg: #1e1e2e;     /* base */
+  --fg: #cdd6f4;     /* text */
+  --muted: #a6adc8;  /* subtext 0 */
+  --border: #45475a; /* surface 1 */
+  --accent: #89b4fa; /* blue */
+  --boot: #f9e2af;   /* yellow */
 }
 body {
   margin: 0;

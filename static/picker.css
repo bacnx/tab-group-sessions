@@ -1,27 +1,16 @@
+/* Catppuccin Mocha — https://catppuccin.com/palette/ */
 :root {
-  color-scheme: light dark;
-  --bg: #ffffff;
-  --fg: #1f1f1f;
-  --muted: #6b6b6b;
-  --border: #dadce0;
-  --accent: #1a73e8;
-  --selected: #e8f0fe;
-  --mark: #1a73e8;
-  --g-grey: #5f6368; --g-blue: #1a73e8; --g-red: #d93025; --g-yellow: #f9ab00; --g-green: #188038;
-  --g-pink: #d01884; --g-purple: #a142f4; --g-cyan: #007b83; --g-orange: #fa903e;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #202124;
-    --fg: #e8eaed;
-    --muted: #9aa0a6;
-    --border: #3c4043;
-    --accent: #8ab4f8;
-    --selected: #394457;
-    --mark: #8ab4f8;
-    --g-grey: #bdc1c6; --g-blue: #8ab4f8; --g-red: #f28b82; --g-yellow: #fdd663; --g-green: #81c995;
-    --g-pink: #ff8bcb; --g-purple: #d7aefb; --g-cyan: #78d9ec; --g-orange: #fcad70;
-  }
+  color-scheme: dark;
+  --bg: #1e1e2e;       /* base */
+  --fg: #cdd6f4;       /* text */
+  --muted: #a6adc8;    /* subtext 0 */
+  --border: #45475a;   /* surface 1 */
+  --accent: #89b4fa;   /* blue */
+  --selected: #313244; /* surface 0 */
+  --mark: #fab387;     /* peach */
+  /* Chrome group colours mapped onto the Mocha accents. */
+  --g-grey: #7f849c; --g-blue: #89b4fa; --g-red: #f38ba8; --g-yellow: #f9e2af; --g-green: #a6e3a1;
+  --g-pink: #f5c2e7; --g-purple: #cba6f7; --g-cyan: #94e2d5; --g-orange: #fab387;
 }
 html, body {
   margin: 0;
