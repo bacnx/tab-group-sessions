@@ -12,7 +12,7 @@ import type { ActionResult, Message } from '../shared/messages';
 import { NO_GROUP } from '../shared/model';
 import { closeGroup, moveActiveTab, newGroup, renameGroup, setGroupColor } from './manage';
 import { checkNewWindow, noteActivity, noteGroupCreated, restoreSnapshot, runBootFlow } from './restore';
-import { SNAPSHOT_ALARM, capture, captureIfDirty, markDirty, windowClosing } from './snapshot';
+import { SNAPSHOT_ALARM, capture, captureIfDirty, markDirty, tabClosed, windowClosing } from './snapshot';
 import { clearWindowState } from './state';
 
 chrome.tabs.onActivated.addListener(({ windowId }) => {
@@ -127,7 +127,7 @@ chrome.tabs.onUpdated.addListener((_tabId, change) => {
 });
 chrome.tabs.onRemoved.addListener((_tabId, { isWindowClosing }) => {
   if (isWindowClosing) windowClosing();
-  else markDirty();
+  else tabClosed();
 });
 chrome.tabGroups.onCreated.addListener(markDirty);
 chrome.tabGroups.onUpdated.addListener(markDirty);

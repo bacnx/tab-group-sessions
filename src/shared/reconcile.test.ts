@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeUrl, planIsEmpty, reconcile, type LiveWindowState, type RestorePlan } from './reconcile';
+import { describePlan, formatPlan, normalizeUrl, planIsEmpty, reconcile, type LiveWindowState, type RestorePlan } from './reconcile';
 import type { SnapGroup, SnapWindow } from './snapshot';
 
 const tab = (url: string) => ({ url, title: url });
@@ -159,5 +159,31 @@ describe('isNearEmpty', () => {
     expect(isNearEmpty([liveWindow(1, [], [A, B])])).toBe(true);
     expect(isNearEmpty([liveWindow(1, [], [A, B, C])])).toBe(false);
     expect(isNearEmpty([liveWindow(1, [['x', []]], [])])).toBe(false);
+  });
+});
+
+describe('describePlan', () => {
+  it('lists every missing tab by group, marking new groups and windows', () => {
+    // api lost B, research and pinned M are gone entirely.
+    const live = [liveWindow(1, [['api', [A]], ['Inbox', [D]]])];
+    const plan = reconcile(session, live);
+    expect(describePlan(plan)).toEqual([
+      { group: '(pinned)', newGroup: false, newWindow: false, urls: [M] },
+      { group: 'api', newGroup: false, newWindow: false, urls: [B] },
+      { group: 'research', newGroup: true, newWindow: false, urls: [C] },
+    ]);
+    expect(formatPlan(plan)).toBe(
+      ['(pinned) — 1 tab', `  ${M}`, 'api — 1 tab', `  ${B}`, 'research — 1 tab (new group)', `  ${C}`].join('\n'),
+    );
+  });
+
+  it('is empty for an empty plan', () => {
+    const live = [liveWindow(1, [['api', [A, B]], ['research', [C]], ['Inbox', [D]]], [M])];
+    expect(describePlan(reconcile(session, live))).toEqual([]);
+  });
+
+  it('marks tabs that need a new window', () => {
+    const plan = reconcile(session, []);
+    expect(describePlan(plan).every((e) => e.newWindow && (e.group === '(pinned)' || e.newGroup))).toBe(true);
   });
 });

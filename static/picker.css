@@ -176,6 +176,10 @@ kbd {
 }
 .detail {
   padding: 10px 12px;
+  max-height: 360px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .error:empty {
   display: none;

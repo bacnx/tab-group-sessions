@@ -3,7 +3,9 @@
 //
 // Never written from a transient state:
 // - closing a window first ungroups its tabs, then removes them with isWindowClosing — any
-//   pending snapshot is cancelled and writes are suppressed for a moment;
+//   pending snapshot is cancelled and writes are suppressed for a moment; if other windows
+//   remain afterwards, the smaller session is written right away (not left to the 1-minute
+//   alarm, or an exit in between would keep the closed window in the last snapshot);
 // - with no normal window left (Chrome keeps running in the background) nothing is written;
 // - while booting (Chrome still restoring the previous session; see restore.ts).
 
@@ -26,6 +28,9 @@ import { isReady } from './state';
 const DIRTY_KEY = 'snapshotDirty';
 export const SNAPSHOT_ALARM = 'snapshot';
 const CLOSING_SUPPRESS_MS = 2_000;
+/** A closed tab is written sooner than other changes: closing tabs right before exiting
+ * Chrome must still reach the last snapshot. */
+const TAB_CLOSED_DELAY_MS = 1_000;
 
 let settings: Settings = DEFAULT_SETTINGS;
 void getSettings().then((s) => (settings = s));
@@ -35,19 +40,32 @@ chrome.storage.onChanged.addListener((changes, area) => {
 
 let timer: ReturnType<typeof setTimeout> | undefined;
 let suppressUntil = 0;
+/** A window was closed since the last write: the drop in tabs is intended, not suspicious. */
+let windowClosedSinceCapture = false;
 
-/** Something changed: write a snapshot once things are quiet. */
-export function markDirty(): void {
+function schedule(delayMs: number): void {
   void chrome.storage.session.set({ [DIRTY_KEY]: true });
   clearTimeout(timer);
-  timer = setTimeout(() => void enqueue('snapshot', () => captureIfDirty()), settings.snapshotDelaySec * 1000);
+  timer = setTimeout(() => void enqueue('snapshot', () => captureIfDirty()), delayMs);
 }
 
-/** A window is closing: drop the pending snapshot, it would capture a half-closed window. The
- * dirty flag stays, so the periodic alarm still records the new state if Chrome keeps running. */
+/** Something changed: write a snapshot once things are quiet. (Also used directly as an
+ * event listener, so it takes no parameters.) */
+export function markDirty(): void {
+  schedule(settings.snapshotDelaySec * 1000);
+}
+
+/** A tab was closed (not by closing its window). */
+export function tabClosed(): void {
+  schedule(Math.min(TAB_CLOSED_DELAY_MS, settings.snapshotDelaySec * 1000));
+}
+
+/** A window is closing: drop the pending snapshot, it would capture a half-closed window, and
+ * write once the closing is over. With no window left (Chrome exiting) nothing is written. */
 export function windowClosing(): void {
-  clearTimeout(timer);
+  windowClosedSinceCapture = true;
   suppressUntil = Date.now() + CLOSING_SUPPRESS_MS;
+  schedule(CLOSING_SUPPRESS_MS + 250);
 }
 
 export async function captureIfDirty(): Promise<void> {
@@ -94,13 +112,20 @@ export async function capture(): Promise<Snapshot | undefined> {
     ts: Date.now(),
     hash: hashWindows(windows),
     tabCount,
-    suspicious: isSuspicious(list[0], tabCount),
+    suspicious: !windowClosedSinceCapture && isSuspicious(list[0], tabCount),
     windows,
   };
   const pinned = (await chrome.storage.local.get(PINNED_SNAPSHOT_KEY))[PINNED_SNAPSHOT_KEY] as string | undefined;
   const next = pushSnapshot(list, snap, settings.snapshotCount, pinned);
   if (next[0] !== snap) return undefined; // identical to the latest
   await chrome.storage.local.set({ [SNAPSHOTS_KEY]: next });
-  log('snapshot.saved', { tabs: tabCount, windows: windows.length, suspicious: snap.suspicious, kept: next.length });
+  log('snapshot.saved', {
+    tabs: tabCount,
+    windows: windows.length,
+    suspicious: snap.suspicious,
+    afterWindowClose: windowClosedSinceCapture,
+    kept: next.length,
+  });
+  windowClosedSinceCapture = false;
   return snap;
 }

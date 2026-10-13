@@ -11,7 +11,7 @@ import { NO_GROUP, isNewTabPageUrl, normalizeTitle, type GroupColor } from '../s
 import { isNearEmpty, readLiveState } from '../shared/live';
 import type { ActionResult } from '../shared/messages';
 import { planMerges, type DedupeGroup } from '../shared/dedupe';
-import { planIsEmpty, reconcile, type RestorePlan, type WindowPlan } from '../shared/reconcile';
+import { describePlan, planIsEmpty, reconcile, type PlanEntry, type RestorePlan, type WindowPlan } from '../shared/reconcile';
 import { PINNED_SNAPSHOT_KEY, latestGood, type Snapshot } from '../shared/snapshot';
 import { getSettings } from '../shared/settings';
 import { focusGroup, getActiveTab, syncFocus } from './focus';
@@ -49,7 +49,9 @@ async function setPendingBadge(plan: RestorePlan | undefined): Promise<void> {
     await chrome.action.setBadgeText({ text: '!' });
     await chrome.action.setBadgeBackgroundColor({ color: '#d93025' });
     await chrome.action.setTitle({
-      title: `Tab Group Sessions — ${plan.tabCount} tab(s) from the last session are missing. Restore: leader u`,
+      title:
+        `Tab Group Sessions — ${plan.tabCount} tab(s) from the last session are missing ` +
+        `(${[...new Set(describePlan(plan).map((e) => e.group))].join(', ')}). Restore: leader u`,
     });
   } else {
     await chrome.action.setBadgeText({ text: '' });
@@ -104,6 +106,8 @@ interface ReconcileOutcome {
   restored: boolean;
   tabCount: number;
   groupCount: number;
+  /** What the snapshot has that the live state lacks — why the "!" badge shows. */
+  missing?: PlanEntry[];
 }
 
 /** Must run inside the queue. */
@@ -124,6 +128,7 @@ async function reconcileNow(opts: { auto: boolean; trigger: string }): Promise<R
     restored: false,
     tabCount: plan.tabCount,
     groupCount: plan.groupCount,
+    missing: planIsEmpty(plan) ? undefined : describePlan(plan),
   };
   if (!planIsEmpty(plan) && opts.auto && nearEmpty) {
     await executePlan(plan, { clearNewTabs: true });

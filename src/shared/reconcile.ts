@@ -226,3 +226,38 @@ function windowTabCount(p: WindowPlan): number {
 export function planIsEmpty(plan: RestorePlan): boolean {
   return plan.tabCount === 0;
 }
+
+/** One line of a plan, for showing the user exactly what a restore would add. */
+export interface PlanEntry {
+  /** Group title ('(pinned)' for pinned tabs, '(untitled)' for an untitled group). */
+  group: string;
+  /** The group does not exist yet and will be created. */
+  newGroup: boolean;
+  /** The window does not exist yet and will be opened. */
+  newWindow: boolean;
+  urls: string[];
+}
+
+export function describePlan(plan: RestorePlan): PlanEntry[] {
+  return plan.windows.flatMap((w) => {
+    const newWindow = w.windowId === undefined;
+    const entries: PlanEntry[] = [];
+    if (w.pinned.length) entries.push({ group: '(pinned)', newGroup: false, newWindow, urls: w.pinned.map((t) => t.url) });
+    for (const g of w.addToGroups)
+      entries.push({ group: g.title || '(untitled)', newGroup: false, newWindow, urls: g.tabs.map((t) => t.url) });
+    for (const g of w.createGroups)
+      entries.push({ group: g.title || '(untitled)', newGroup: true, newWindow, urls: g.tabs.map((t) => t.url) });
+    return entries;
+  });
+}
+
+/** Multi-line text form of describePlan, e.g. for a confirmation view. */
+export function formatPlan(plan: RestorePlan): string {
+  return describePlan(plan)
+    .map((e) => {
+      const tags = [e.newGroup && 'new group', e.newWindow && 'new window'].filter(Boolean).join(', ');
+      const head = `${e.group} — ${e.urls.length} tab${e.urls.length === 1 ? '' : 's'}${tags ? ` (${tags})` : ''}`;
+      return [head, ...e.urls.map((u) => `  ${u}`)].join('\n');
+    })
+    .join('\n');
+}

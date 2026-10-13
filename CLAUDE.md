@@ -160,8 +160,12 @@ scripts/make-icons.mjs renders static/icons/*.png (dependency-free; PNGs are com
   dirty state if the worker died first. Tab title changes don't trigger (read at capture).
 - Skipped when identical to the latest (FNV-1a hash), when no normal window exists, within 2 s
   of a window closing (`isWindowClosing` cancels the pending write), and while booting.
+  After a window closes the snapshot is written ~2.25 s later if other windows remain (else an
+  exit soon after would keep the closed window in the last snapshot → false `!` on restart);
+  a closed tab is written after 1 s instead of `snapshotDelaySec`.
 - Ring buffer `storage.local.snapshots`, newest first, `snapshotCount` (default 10); a snapshot
-  losing > 50 % of ≥ 6 tabs is `suspicious`; trimming never evicts the latest good one.
+  losing > 50 % of ≥ 6 tabs is `suspicious` (except the one written after a window close);
+  trimming never evicts the latest good one.
 - Diagnostics: list of snapshots, `n` capture now, `v` view the latest as JSON.
 
 ### Restore (M6)
@@ -179,7 +183,8 @@ scripts/make-icons.mjs renders static/icons/*.png (dependency-free; PNGs are com
   3. Pin the previous session's latest good snapshot (`storage.local.pinnedSnapshotId`) — the
      ring buffer never evicts it, the restore picker lists it first as "last session".
   4. Reconcile. Near-empty live state (no groups, ≤ 2 tabs) → restore automatically.
-     Otherwise a non-empty plan → red `!` badge + tooltip, nothing restored.
+     Otherwise a non-empty plan → red `!` badge + tooltip (missing group names), nothing
+     restored. The `restore.boot` log entry lists every missing URL by group (`missing`).
   5. Re-apply focus in every window: Chrome's restored active tab wins if grouped, else the
      snapshot's active group. 6. `phase = ready`, sweep all windows, take a snapshot.
 - A normal window created later while it is the only one (Chrome reopened from background)
@@ -190,7 +195,8 @@ scripts/make-icons.mjs renders static/icons/*.png (dependency-free; PNGs are com
   discarded if `discardOnRestore` (default on) — **only after their URL has committed**.
   Unopenable URLs skipped.
 - Manual restore: picker mode `snapshots` (leader `u`, `50-restore-snapshot`) lists snapshots
-  with a preview ("adds N tabs, M groups" / "nothing missing"); Enter merges.
+  with a preview ("adds N tabs, M groups" / "nothing missing"); Enter shows every URL that
+  would be added, by group (`formatPlan`), and a second Enter merges; Esc goes back.
 - Duplicate merge (`shared/dedupe.ts`, pure, tested): a merge moves the duplicate's tabs into
   the kept group and closes those whose URL the kept group already has. Titles compare
   case-insensitively; untitled groups never merge; **Inbox never merges across windows**.

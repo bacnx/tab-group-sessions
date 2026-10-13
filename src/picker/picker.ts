@@ -7,7 +7,7 @@ import { matchFields, tokenize } from '../shared/fuzzy';
 import { GROUP_COLORS, NO_GROUP, groupOrder, isTitleTaken, normalizeTitle, type GroupColor } from '../shared/model';
 import { PENDING_OPEN_KEY, send, type ActionResult, type PendingOpen, type PickerMode } from '../shared/messages';
 import { readLiveState } from '../shared/live';
-import { planIsEmpty, reconcile } from '../shared/reconcile';
+import { formatPlan, planIsEmpty, reconcile } from '../shared/reconcile';
 import { search, type PickerData, type PickerGroup, type PickerTab, type Row } from '../shared/search';
 import { PINNED_SNAPSHOT_KEY, SNAPSHOTS_KEY, type Snapshot } from '../shared/snapshot';
 import { getSettings } from '../shared/settings';
@@ -449,7 +449,19 @@ async function showSnapshots(): Promise<void> {
           el('span', 'url', effect),
         );
       },
-      onSelect: ({ snap }) => act({ type: 'restore-snapshot', snapshotId: snap.id }),
+      onSelect: ({ snap, plan }) => {
+        if (planIsEmpty(plan)) return act({ type: 'restore-snapshot', snapshotId: snap.id });
+        // Show exactly what would be added before doing it.
+        showConfirm(
+          app,
+          {
+            title: `Restore ${plan.tabCount} tab${plan.tabCount === 1 ? '' : 's'} from ${timeAgo(snap.ts)}?`,
+            detail: formatPlan(plan),
+            onConfirm: () => act({ type: 'restore-snapshot', snapshotId: snap.id }),
+          },
+          () => void showSnapshots(),
+        );
+      },
     },
     closePicker,
   );
