@@ -98,6 +98,13 @@ body.in-window .results {
 .dot.square {
   border-radius: 3px;
 }
+.num {
+  flex: none;
+  width: 1ch;
+  color: var(--accent);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
 .plus {
   flex: none;
   width: 16px;
@@ -219,6 +226,15 @@ kbd {
   display: flex;
   gap: 10px;
   padding: 2px 0;
+}
+.menu-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.menu-group .title {
+  font-weight: 400;
 }
 .menu-entry kbd {
   flex: none;

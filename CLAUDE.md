@@ -67,8 +67,13 @@ Shortcuts: `chrome://extensions/shortcuts`. Suggested keys in the manifest only 
    - Results from other windows show a window label.
 5. **Move tab mode**: same picker, lists only groups of the *current window* + "New group…".
 6. **Next/prev tab cycles inside the current group** (wraps). `goto-tab-1..9` select the Nth
-   tab of the group (9 = last). Chrome's own Ctrl+Tab / Ctrl+1..9 cannot be overridden.
-   Moving to another group is done through the picker or next/prev-group.
+   tab of the group (9 = last; no default key — Chrome's Ctrl+1..9 already stays in the open
+   group). Chrome's own Ctrl+Tab / Ctrl+1..9 cannot be overridden.
+   Moving to another group is done through the picker, next/prev-group or **focus-group-N**:
+   groups are numbered per window from the left, Inbox excluded (`1`–`9`, none past the ninth),
+   the Inbox is `0` (`numberGroups` in `shared/model.ts`). Numbers are shown in the picker
+   (current window's group rows) and the leader menu, **never written into group titles**
+   (decided: renumbering would rewrite titles and saved groups and fight mouse renames).
 7. **Group management by keyboard**: rename, close (always **with confirmation**, closes the
    tabs for good), new group, color, reorder, MRU toggle, reopen last closed group.
    Group titles must be **unique per window**, case-insensitive (enforced on keyboard
@@ -221,7 +226,7 @@ taken; avoid Alt+Space (Windows window menu) and Unikey/EVKey hotkeys.
 **Default layout (agreed)** — source of truth `RECOMMENDED_KEYS` in `shared/commands.ts`;
 a unit test keeps the manifest's `suggested_key`s equal to the entries marked `suggested`:
 `Alt+A` leader (`_execute_action`)*, `Alt+S` search (`10`)*, `Alt+.` / `Alt+,` next/prev
-group*, `Alt+L` last group, `Alt+1..9` goto tab, `Alt+M` move tab, `Alt+C` new group, `Alt+X`
+group*, `Alt+L` last group, `Alt+1..9` focus group N, `Alt+0` Inbox, `Alt+M` move tab, `Alt+C` new group, `Alt+X`
 close group, `Alt+Shift+D` diagnostics. (* = suggested in the manifest; the rest are bound by
 hand.) Everything else goes through the leader. Options shows recommended vs. current bindings.
 Also avoided: Alt+F/Alt+E (Chrome menu), Alt+D (address bar), Alt+Z (Unikey), Alt+Shift+letter
@@ -238,9 +243,10 @@ category. Renaming a command drops its binding — keep names stable once assign
 | 1x Picker | `10-open-picker` (search; openPopup, window fallback in fullscreen), `11-open-picker-window`, `12-open-leader` |
 | 2x Group | `20-next-group`, `21-prev-group`, `22-last-group`, `23-move-tab`, `24-new-group`, `25-rename-group`, `26-close-group`, `27-set-group-color`, `28-move-group-left`, `29-move-group-right` |
 | 3x Tab | `30-next-tab-in-group`, `31-prev-tab-in-group` |
-| 4x Goto | `41-goto-tab-1` … `49-goto-tab-9` (9 = last; planned binding Alt+1..9) |
+| 4x Goto | `41-goto-tab-1` … `49-goto-tab-9` (9 = last; unbound by default) |
 | 5x Recovery | `50-restore-snapshot`, `51-merge-duplicate-groups`, `52-reopen-closed-group` |
-| 6x–8x | reserved |
+| 6x Focus | `60-focus-inbox`, `61-focus-group-1` … `69-focus-group-9` (Alt+0..9) |
+| 7x–8x | reserved |
 | 9x Debug | `90-open-diagnostics` |
 
 ### Leader mode (tmux-style, toggle in Options)
@@ -251,7 +257,8 @@ the picker into a mode. `Esc` closes. Disabled in Options → `_execute_action` 
 | Section | Keys |
 |---|---|
 | Find | `s` / `Space` search |
-| Tab | `n` / `p` next/prev tab in group · `1`–`9` goto tab · `m` move tab to group |
+| Go to group | `1`–`9` group N · `0` Inbox (lists the window's numbered groups) |
+| Tab | `n` / `p` next/prev tab in group · `m` move tab to group |
 | Group | `)` / `(` next/prev group · `l` last group · `c` new · `,` rename · `k` colour · `{` / `}` move left/right · `x` close |
 | Recovery | `u` restore from a snapshot · `r` reopen closed group · `M` merge same-named groups into this window |
 | Other | `o` options |

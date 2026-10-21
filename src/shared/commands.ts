@@ -3,7 +3,8 @@
 //
 // Chrome lists commands on chrome://extensions/shortcuts sorted by *name*, not manifest order,
 // so names carry a numeric prefix that groups them:
-//   1x picker · 2x groups · 3x tabs in group · 4x goto tab N · 5x recovery · 9x debug
+//   1x picker · 2x groups · 3x tabs in group · 4x goto tab N · 5x recovery · 6x focus group N
+//   · 9x debug
 // Descriptions start with the same category word. Renaming a command drops the user's binding
 // for it, so keep these stable once assigned.
 
@@ -26,6 +27,7 @@ export const CMD = {
   reopenClosedGroup: '52-reopen-closed-group',
   nextTabInGroup: '30-next-tab-in-group',
   prevTabInGroup: '31-prev-tab-in-group',
+  focusInbox: '60-focus-inbox',
   openDiagnostics: '90-open-diagnostics',
 } as const;
 
@@ -44,7 +46,7 @@ export const RECOMMENDED_KEYS: readonly { command: string; key: string; suggeste
   { command: CMD.moveTab, key: 'Alt+M' },
   { command: CMD.newGroup, key: 'Alt+C' },
   { command: CMD.closeGroup, key: 'Alt+X' },
-  ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => ({ command: gotoTabCommand(n), key: `Alt+${n}` })),
+  ...[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => ({ command: focusGroupCommand(n), key: `Alt+${n}` })),
   { command: CMD.openDiagnostics, key: 'Alt+Shift+D' },
 ];
 
@@ -71,6 +73,22 @@ export function parseGotoTab(command: string): number | undefined {
   return m ? Number(m[1]) : undefined;
 }
 
+const FOCUS_GROUP = /^6([1-9])-focus-group-\1$/;
+
+/** focus-group-N: 0 is the Inbox, 1–9 the other groups from the left (see numberGroups). */
+export function focusGroupCommand(n: number): string {
+  return n === 0 ? CMD.focusInbox : `6${n}-focus-group-${n}`;
+}
+
+/** N for a focus-group command name (0 = Inbox), else undefined. */
+export function parseFocusGroup(command: string): number | undefined {
+  if (command === CMD.focusInbox) return 0;
+  const m = FOCUS_GROUP.exec(command);
+  return m ? Number(m[1]) : undefined;
+}
+
+const DIGITS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+
 export function allCommandNames(): string[] {
-  return ['_execute_action', ...Object.values(CMD), ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map(gotoTabCommand)];
+  return ['_execute_action', ...Object.values(CMD), ...DIGITS.map(gotoTabCommand), ...DIGITS.map((n) => focusGroupCommand(n))];
 }

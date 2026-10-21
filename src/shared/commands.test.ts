@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import manifest from '../../static/manifest.json';
-import { RECOMMENDED_KEYS, allCommandNames, gotoTabCommand, normalizeShortcut, parseGotoTab } from './commands';
+import { RECOMMENDED_KEYS, allCommandNames, focusGroupCommand, gotoTabCommand, normalizeShortcut, parseFocusGroup, parseGotoTab } from './commands';
 
 describe('commands', () => {
   it('match the manifest exactly', () => {
@@ -34,5 +34,12 @@ describe('commands', () => {
     for (let n = 1; n <= 9; n++) expect(parseGotoTab(gotoTabCommand(n))).toBe(n);
     expect(parseGotoTab('20-next-group')).toBeUndefined();
     expect(parseGotoTab('41-goto-tab-2')).toBeUndefined();
+  });
+
+  it('round-trips focus-group names', () => {
+    for (let n = 0; n <= 9; n++) expect(parseFocusGroup(focusGroupCommand(n))).toBe(n);
+    expect(focusGroupCommand(0)).toBe('60-focus-inbox');
+    expect(parseFocusGroup('41-goto-tab-1')).toBeUndefined();
+    expect(parseFocusGroup('61-focus-group-2')).toBeUndefined();
   });
 });

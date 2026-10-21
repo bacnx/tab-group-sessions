@@ -2,16 +2,16 @@
 // close, colour — chosen by how it was launched (see launcher.ts). Reads come straight from
 // the chrome.* APIs; mutations go to the service worker queue.
 
-import { CMD, gotoTabCommand } from '../shared/commands';
+import { CMD, focusGroupCommand } from '../shared/commands';
 import { matchFields, tokenize } from '../shared/fuzzy';
-import { GROUP_COLORS, NO_GROUP, groupOrder, isTitleTaken, normalizeTitle, type GroupColor } from '../shared/model';
+import { GROUP_COLORS, NO_GROUP, groupOrder, isTitleTaken, normalizeTitle, numberGroups, type GroupColor } from '../shared/model';
 import { PENDING_OPEN_KEY, send, type ActionResult, type PendingOpen, type PickerMode } from '../shared/messages';
 import { readLiveState } from '../shared/live';
 import { formatPlan, planIsEmpty, reconcile } from '../shared/reconcile';
 import { search, type PickerData, type PickerGroup, type PickerTab, type Row } from '../shared/search';
 import { PINNED_SNAPSHOT_KEY, SNAPSHOTS_KEY, type Snapshot } from '../shared/snapshot';
 import { getSettings } from '../shared/settings';
-import { el, showConfirm, showList, showMenu, showMessage, showPrompt, type Outcome } from './views';
+import { el, showConfirm, showList, showMenu, showMessage, showPrompt, type MenuEntry, type Outcome } from './views';
 
 const app = document.getElementById('app') as HTMLDivElement;
 const params = new URLSearchParams(location.search);
@@ -95,10 +95,26 @@ function highlight(text: string, positions: number[], offset = 0): DocumentFragm
 
 // --- leader --------------------------------------------------------------------------------
 
-function showLeader(windowId: number): void {
+/** Leader `0`–`9` → focus-group-N: one entry per numbered group of the window. */
+async function groupEntries(windowId: number): Promise<MenuEntry[]> {
+  const groups = await windowGroups(windowId);
+  const current = (await currentGroup(windowId))?.id;
+  const numbers = numberGroups(groups);
+  return groups
+    .filter((g) => numbers.has(g.id))
+    .sort((a, b) => (numbers.get(a.id) || 10) - (numbers.get(b.id) || 10)) // Inbox (0) last
+    .map((g) => {
+      const n = numbers.get(g.id)!;
+      const text = el('span', 'menu-group', dot(g.color, true), el('span', 'title', g.title || '(untitled)'));
+      if (g.id === current) text.append(el('span', 'meta', 'current'));
+      return { keys: [String(n)], text, run: () => runCommand(windowId, focusGroupCommand(n)) };
+    });
+}
+
+async function showLeader(windowId: number): Promise<void> {
   const go = (mode: PickerMode) => () => void start(mode, windowId);
   const cmd = (command: string) => () => runCommand(windowId, command);
-  const digits = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
+  const groups = await groupEntries(windowId);
   showMenu(
     app,
     'Leader',
@@ -107,17 +123,12 @@ function showLeader(windowId: number): void {
         title: 'Find',
         entries: [{ keys: ['s', ' '], label: 's Space', text: 'Search groups & tabs', run: go('search') }],
       },
+      ...(groups.length ? [{ title: 'Go to group', entries: groups }] : []),
       {
         title: 'Tab',
         entries: [
           { keys: ['n'], text: 'Next tab in group', run: cmd(CMD.nextTabInGroup) },
           { keys: ['p'], text: 'Previous tab in group', run: cmd(CMD.prevTabInGroup) },
-          {
-            keys: digits,
-            label: '1–9',
-            text: 'Go to tab N (9 = last)',
-            run: (key) => runCommand(windowId, gotoTabCommand(Number(key))),
-          },
           { keys: ['m'], text: 'Move tab to group', run: go('move') },
         ],
       },
@@ -161,6 +172,8 @@ function showLeader(windowId: number): void {
 // --- search --------------------------------------------------------------------------------
 
 const windowLabels = new Map<number, string>();
+/** focus-group-N numbers of the current window's groups (Alt+N, leader N). */
+let groupNumbers = new Map<number, number>();
 
 async function loadSearchData(currentWindowId: number): Promise<PickerData> {
   const windows = await chrome.windows.getAll({ populate: true, windowTypes: ['normal'] });
@@ -176,7 +189,11 @@ async function loadSearchData(currentWindowId: number): Promise<PickerData> {
   let currentGroupId: number | undefined;
   for (const w of windows) {
     const wtabs = w.tabs ?? [];
-    for (const id of groupOrder(wtabs)) {
+    const order = groupOrder(wtabs);
+    if (w.id === currentWindowId) {
+      groupNumbers = numberGroups(order.map((id) => ({ id, title: allGroups.get(id)?.title })));
+    }
+    for (const id of order) {
       const g = allGroups.get(id);
       if (!g) continue;
       groups.push({
@@ -221,7 +238,12 @@ function renderSearchRow(row: Row, li: HTMLLIElement, data: PickerData): void {
     if (g.id === data.currentGroupId) meta.push('current');
     const label = windowLabels.get(g.windowId);
     if (label) meta.push(label);
-    li.append(dot(g.color, true), el('span', 'title', highlight(g.title || '(untitled)', row.titlePos)), el('span', 'meta', meta.join(' · ')));
+    li.append(
+      el('span', 'num', String(groupNumbers.get(g.id) ?? '')),
+      dot(g.color, true),
+      el('span', 'title', highlight(g.title || '(untitled)', row.titlePos)),
+      el('span', 'meta', meta.join(' · ')),
+    );
     return;
   }
   const t = row.tab;

@@ -1,9 +1,9 @@
 // Keyboard commands (and the same actions run from the leader menu) → actions.
 // Commands act on the last-focused normal window.
 
-import { CMD, parseGotoTab } from '../shared/commands';
+import { CMD, parseFocusGroup, parseGotoTab } from '../shared/commands';
 import type { PickerMode } from '../shared/messages';
-import { cycleGroup, cycleTabInGroup, gotoTabInGroup, lastGroup } from './actions';
+import { cycleGroup, cycleTabInGroup, focusGroupNumber, gotoTabInGroup, lastGroup } from './actions';
 import { isNormalWindow } from './focus';
 import { openPicker, openPickerWindow } from './launcher';
 import { moveCurrentGroup, reopenClosedGroup } from './manage';
@@ -69,6 +69,8 @@ export function runCommand(command: string, windowHint?: number): void {
     }
     const n = parseGotoTab(command);
     if (n !== undefined) return gotoTabInGroup(windowId, n);
+    const g = parseFocusGroup(command);
+    if (g !== undefined) return focusGroupNumber(windowId, g);
   });
 }
 

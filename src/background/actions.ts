@@ -2,7 +2,7 @@
 // Run them through the queue.
 
 import { log } from '../shared/log';
-import { NO_GROUP, cycle, groupOrder, nthItem } from '../shared/model';
+import { NO_GROUP, cycle, groupOrder, nthItem, numberGroups } from '../shared/model';
 import { focusGroup, getActiveTab, isNormalWindow, loadMru, syncFocus } from './focus';
 import { sleep } from './queue';
 import { getMru, setMru } from './state';
@@ -34,6 +34,15 @@ export async function lastGroup(windowId: number): Promise<void> {
   const mru = await loadMru(windowId);
   const target = mru.find((id) => id !== current && existing.has(id));
   log('action.lastGroup', { windowId, mru, current, target });
+  if (target !== undefined) await focusGroup(windowId, target);
+}
+
+/** focus-group-N: the Nth group from the left, 0 = Inbox (see numberGroups). */
+export async function focusGroupNumber(windowId: number, n: number): Promise<void> {
+  const byId = new Map((await chrome.tabGroups.query({ windowId })).map((g) => [g.id, g]));
+  const ordered = groupOrder(await chrome.tabs.query({ windowId })).map((id) => ({ id, title: byId.get(id)?.title }));
+  const target = [...numberGroups(ordered)].find(([, num]) => num === n)?.[0];
+  log('action.focusGroupNumber', { windowId, n, target });
   if (target !== undefined) await focusGroup(windowId, target);
 }
 

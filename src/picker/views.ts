@@ -213,7 +213,7 @@ export interface MenuEntry {
   keys: string[];
   /** How the keys are shown, e.g. "1–9". Defaults to the keys joined by " ". */
   label?: string;
-  text: string;
+  text: string | Node;
   /** Called with the pressed key. */
   run(key: string): void;
 }

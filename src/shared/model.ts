@@ -115,6 +115,25 @@ export function nthItem<T>(items: readonly T[], n: number): T | undefined {
   return items[n - 1];
 }
 
+/**
+ * Numbers for focus-group-N, from groups in tab-strip order: the Inbox is 0, the other groups
+ * 1–9 from the left; groups past the ninth (and further groups titled Inbox) get none.
+ */
+export function numberGroups(groups: readonly { id: number; title?: string }[]): Map<number, number> {
+  const numbers = new Map<number, number>();
+  let next = 1;
+  let inboxSeen = false;
+  for (const g of groups) {
+    if (g.title === INBOX_TITLE) {
+      if (!inboxSeen) numbers.set(g.id, 0);
+      inboxSeen = true;
+    } else if (next <= 9) {
+      numbers.set(g.id, next++);
+    }
+  }
+  return numbers;
+}
+
 export const GROUP_COLORS = ['grey', 'blue', 'red', 'yellow', 'green', 'pink', 'purple', 'cyan', 'orange'] as const;
 export type GroupColor = (typeof GROUP_COLORS)[number];
 

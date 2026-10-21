@@ -58,7 +58,8 @@ directly.
 |---|---|
 | `s` / `Space` | Search groups and tabs |
 | `n` / `p` | Next / previous tab in the group (wraps) |
-| `1`–`9` | Go to tab N of the group (`9` = last) |
+| `1`–`9` | Go to group N, counted from the left (the menu lists the numbered groups) |
+| `0` | Go to the Inbox |
 | `m` | Move the current tab to a group, or to a new group |
 | `)` / `(` | Next / previous group |
 | `l` | Last used group |
@@ -85,7 +86,7 @@ directly.
 
 Every action is also a command that can be bound to a key at `chrome://extensions/shortcuts`.
 Commands are numbered so they sort by category: 1x picker, 2x group, 3x tab, 4x go to tab N,
-5x recovery, 9x debug.
+5x recovery, 6x go to group N, 9x debug.
 
 Default layout. Only the most frequent actions get a key; everything else goes through the
 leader menu.
@@ -96,11 +97,16 @@ leader menu.
 | `Alt+S` | Search * |
 | `Alt+.` / `Alt+,` | Next / previous group * |
 | `Alt+L` | Last used group |
-| `Alt+1`–`Alt+9` | Go to tab N of the group (`9` = last) |
+| `Alt+1`–`Alt+9` | Go to group N, counted from the left (Inbox not counted) |
+| `Alt+0` | Go to the Inbox |
 | `Alt+M` | Move the current tab to a group |
 | `Alt+C` | New group |
 | `Alt+X` | Close group (asks first) |
 | `Alt+Shift+D` | Diagnostics |
+
+Group numbers are shown next to the groups in search and in the leader menu. Go to tab N of
+the group (4x) has no default key: Chrome's own Ctrl+1–9 already stays inside the open group,
+because it skips tabs in collapsed groups.
 
 Chrome binds only the keys marked * by itself, and only on the first install. Bind the rest by
 hand. Options → "Keyboard shortcuts" lists every recommended key next to its current binding.

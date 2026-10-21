@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NO_GROUP, cycle, decidePlacement, isExternalTransition, isNewTabPageUrl, groupOrder, isTitleTaken, moveGroupIndex, mruFromTabs, nthItem, titleError, pickTabToActivate, pushClosed, touchMru, type TabLike } from './model';
+import { NO_GROUP, cycle, decidePlacement, isExternalTransition, isNewTabPageUrl, groupOrder, isTitleTaken, moveGroupIndex, mruFromTabs, nthItem, numberGroups, titleError, pickTabToActivate, pushClosed, touchMru, type TabLike } from './model';
 
 const tab = (index: number, groupId: number, extra: Partial<TabLike> = {}): TabLike => ({
   id: index + 100,
@@ -116,6 +116,23 @@ describe('nthItem', () => {
     expect(nthItem(['a', 'b', 'c'], 4)).toBeUndefined();
     expect(nthItem(['a', 'b', 'c'], 9)).toBe('c');
     expect(nthItem([], 9)).toBeUndefined();
+  });
+});
+
+describe('numberGroups', () => {
+  it('numbers the Inbox 0 and the others 1–9 from the left', () => {
+    const groups = [{ id: 1, title: 'api' }, { id: 2, title: 'Inbox' }, { id: 3 }, { id: 4, title: 'docs' }];
+    expect([...numberGroups(groups)]).toEqual([[1, 1], [2, 0], [3, 2], [4, 3]]);
+  });
+
+  it('stops at 9 and numbers only the first Inbox', () => {
+    const groups = Array.from({ length: 11 }, (_, i) => ({ id: i, title: `g${i}` }));
+    groups.push({ id: 20, title: 'Inbox' }, { id: 21, title: 'Inbox' });
+    const numbers = numberGroups(groups);
+    expect(numbers.get(8)).toBe(9);
+    expect(numbers.has(9)).toBe(false);
+    expect(numbers.get(20)).toBe(0);
+    expect(numbers.has(21)).toBe(false);
   });
 });
 
