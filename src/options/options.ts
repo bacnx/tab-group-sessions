@@ -44,7 +44,7 @@ document.getElementById('shortcuts')!.addEventListener('click', () => {
 });
 
 /** `Alt+Period` → `Alt+.` for display. */
-const displayKey = (key: string) => key.replace(/Period/, '.').replace(/Comma/, ',');
+const displayKey = (key: string) => key.replace(/\bPeriod\b/, '.').replace(/\bComma\b/, ',');
 
 async function renderKeys(): Promise<void> {
   const live = new Map((await chrome.commands.getAll()).map((c) => [c.name ?? '', c]));
