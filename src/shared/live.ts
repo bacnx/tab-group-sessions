@@ -20,6 +20,7 @@ export async function readLiveState(): Promise<LiveWindowState[]> {
           urls: tabs.filter((t) => t.groupId === id).map(url),
         })),
         otherUrls: tabs.filter((t) => t.groupId === NO_GROUP).map(url),
+        pinnedUrls: tabs.filter((t) => t.pinned).map(url),
       };
     });
 }

@@ -180,7 +180,11 @@ scripts/make-icons.mjs renders static/icons/*.png (dependency-free; PNGs are com
   windows reuse leftover live windows without groups, else become **new windows** (decided).
   Groups match by case-insensitive title, untitled ones by URL Jaccard ≥ 0.5. Tabs are a
   URL multiset per window: a tab already open anywhere in the window (or, for new windows,
-  anywhere left over in the browser) counts as present. Stray ungrouped snapshot tabs go to
+  anywhere left over in the browser) counts as present. A tab that navigated since the snapshot
+  (login redirect after an expired token, an app rewriting its URL) is still present: after
+  exact matching, a group's missing URLs pair with that live group's unmatched tabs (same host
+  first, then strip order), pinned with unmatched pinned tabs; only the surplus is missing —
+  otherwise every restart showed a false `!`. Stray ungrouped snapshot tabs go to
   Inbox. The plan only adds; reconciling after applying it yields an empty plan (tested).
 - `background/restore.ts`, boot flow (every SW start, no-op once `phase = ready`):
   1. `phase = booting` → stray sweep and snapshots are paused.

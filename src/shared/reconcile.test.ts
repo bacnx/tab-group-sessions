@@ -136,6 +136,31 @@ describe('reconcile', () => {
     expect(planIsEmpty(plan)).toBe(true);
   });
 
+  it('treats a tab that navigated inside its group as present (login redirect)', () => {
+    const login = 'https://login.example/?return=b';
+    const live = [liveWindow(1, [['api', [A, login]], ['research', [C]], ['Inbox', [D]]], [M])];
+    expect(planIsEmpty(reconcile(session, live))).toBe(true);
+  });
+
+  it('still reports a lost tab next to a navigated one, pairing by host first', () => {
+    const snap = [snapWindow([group('api', [A, B, C])])];
+    // B is gone; C redirected within its own host.
+    const plan = reconcile(snap, [liveWindow(1, [['api', [A, 'https://c.dev/login']]])]);
+    expect(plan.windows[0]!.addToGroups[0]!.tabs).toEqual([tab(B)]);
+  });
+
+  it('does not pair a missing tab with an extra tab of another group', () => {
+    const live = [liveWindow(1, [['api', [A]], ['research', [C]], ['Inbox', [D, 'https://x.dev/']]], [M])];
+    expect(describePlan(reconcile(session, live)).flatMap((e) => e.urls)).toEqual([B]);
+  });
+
+  it('pairs a pinned tab that navigated, but not with an ungrouped tab', () => {
+    const groups: [string, string[]][] = [['api', [A, B]], ['research', [C]], ['Inbox', [D]]];
+    const accounts = 'https://accounts.example/signin';
+    expect(planIsEmpty(reconcile(session, [{ ...liveWindow(1, groups, [accounts]), pinnedUrls: [accounts] }]))).toBe(true);
+    expect(reconcile(session, [liveWindow(1, groups, [accounts])]).windows[0]!.pinned).toEqual([tab(M)]);
+  });
+
   it('skips new windows whose tabs are already open in another window', () => {
     const snap = [snapWindow([group('api', [A])]), snapWindow([group('labs', [C])])];
     // The user dragged C into window 1, outside the "api" group.

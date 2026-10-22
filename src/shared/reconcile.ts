@@ -17,6 +17,8 @@ export interface LiveWindowState {
   groups: LiveGroupState[];
   /** Pinned and ungrouped tabs. */
   otherUrls: string[];
+  /** The pinned ones among `otherUrls`; omitted → none. */
+  pinnedUrls?: string[];
 }
 
 export interface GroupToCreate {
@@ -152,12 +154,42 @@ function matchWindows(snap: SnapWindow[], live: LiveWindowState[]): Map<number, 
   return result;
 }
 
+function host(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * A tab can navigate between the snapshot and the reconcile without being lost: a login
+ * redirect after an expired session, an app rewriting its URL. Its old URL then looks missing
+ * while the same group holds a tab nothing matched. Pairs the two (same host first, then strip
+ * order) and returns what is still missing. `liveUrls` are the URLs of the live group (or the
+ * pinned tabs); only those `available` still holds are spare.
+ */
+function pairNavigated(missing: SnapTab[], liveUrls: string[], available: UrlBag): SnapTab[] {
+  if (missing.length === 0) return missing;
+  const spare = liveUrls.filter((u) => available.take(u));
+  const left = [...missing];
+  let unpaired = 0;
+  for (const u of spare) {
+    const i = left.findIndex((t) => host(t.url) === host(u));
+    if (i !== -1) left.splice(i, 1);
+    else unpaired++;
+  }
+  return left.slice(unpaired);
+}
+
 /** `available` holds the URLs that count as already open; matching tabs are consumed. */
 function planWindow(sw: SnapWindow, lw: LiveWindowState | undefined, available: UrlBag): WindowPlan {
   const plan: WindowPlan = { windowId: lw?.id, createGroups: [], addToGroups: [], pinned: [], activeGroup: sw.activeGroup };
 
-  plan.pinned = sw.pinned.filter((t) => !available.take(t.url));
-
+  // First pass: exact URLs. A tab already open anywhere in the window counts as present (the
+  // user may have moved it), so every group is matched before any tab is paired as navigated.
+  const pinned = sw.pinned.filter((t) => !available.take(t.url));
+  const pending: { g: SnapGroup; target?: LiveGroupState; missing: SnapTab[] }[] = [];
   const unmatchedLive = [...(lw?.groups ?? [])];
   for (const g of snapGroups(sw)) {
     let target: LiveGroupState | undefined;
@@ -171,9 +203,13 @@ function planWindow(sw: SnapWindow, lw: LiveWindowState | undefined, available: 
       );
     }
     if (target) unmatchedLive.splice(unmatchedLive.indexOf(target), 1);
+    pending.push({ g, target, missing: g.tabs.filter((t) => !available.take(t.url)) });
+  }
 
-    // A tab already open anywhere in the window counts as present (the user may have moved it).
-    const missing = g.tabs.filter((t) => !available.take(t.url));
+  // Second pass: tabs that navigated away inside their own group (or among the pinned tabs).
+  plan.pinned = pairNavigated(pinned, lw?.pinnedUrls ?? [], available);
+  for (const { g, target, missing: unmatched } of pending) {
+    const missing = pairNavigated(unmatched, target?.urls ?? [], available);
     if (missing.length === 0) continue;
     if (target) plan.addToGroups.push({ groupId: target.id, title: target.title, tabs: missing });
     else plan.createGroups.push({ title: g.title, color: g.color, collapsed: g.collapsed, tabs: missing });
